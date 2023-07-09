@@ -1,6 +1,6 @@
 add_library(common STATIC)
 
-target_include_directories(deps
+target_include_directories(common
 PUBLIC
     interface
 PRIVATE
