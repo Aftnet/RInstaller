@@ -41,3 +41,8 @@ PRIVATE
 )
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${CURRENT_TARGET_SOURCES})
+
+target_link_libraries(${CURRENT_TARGET_NAME}
+PUBLIC
+    mbedtls
+)
