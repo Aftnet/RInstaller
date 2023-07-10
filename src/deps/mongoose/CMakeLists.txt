@@ -7,6 +7,25 @@ PUBLIC
 PRIVATE
 )
 
+if(CMAKE_TOOLCHAIN_FILE)
+    get_filename_component(CMAKE_TOOLCHAIN_FILENAME ${CMAKE_TOOLCHAIN_FILE} NAME)
+
+    if(CMAKE_TOOLCHAIN_FILENAME STREQUAL "Switch.cmake")
+        set(CURRENT_TARGET_PLATFORM_DEFINES
+            MG_ARCH=MG_ARCH_UNIX
+        )
+    endif()
+else()
+    set(CURRENT_TARGET_PLATFORM_DEFINES
+        MG_ENABLE_IPV6=1
+    )
+endif()
+
+target_compile_definitions(${CURRENT_TARGET_NAME}
+PUBLIC
+    MG_ARCH=MG_ARCH_UNIX
+)
+
 set(CURRENT_TARGET_SOURCES
     src/mongoose.h
     src/mongoose.c
