@@ -15,5 +15,5 @@ PRIVATE
 
 target_link_libraries(common
 PUBLIC
-    asio
+    mongoose
 )

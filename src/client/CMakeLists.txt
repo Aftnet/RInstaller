@@ -7,5 +7,6 @@ PRIVATE
 
 target_link_libraries(client
 PUBLIC
+    asio
     common
 )
