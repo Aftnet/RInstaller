@@ -2,13 +2,13 @@ add_library(common STATIC)
 
 target_include_directories(common
 PUBLIC
-    interface
+    include
 PRIVATE
 )
 
 target_sources(common
 PUBLIC
-    interface/globals.hpp
+    include/protocol.h
 PRIVATE
     empty.cpp
 )
