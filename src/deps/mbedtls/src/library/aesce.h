@@ -9,19 +9,7 @@
  */
 /*
  *  Copyright The Mbed TLS Contributors
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
  */
 #ifndef MBEDTLS_AESCE_H
 #define MBEDTLS_AESCE_H
@@ -31,26 +19,43 @@
 #include "mbedtls/aes.h"
 
 
-#if defined(MBEDTLS_HAVE_ASM) && defined(__GNUC__) && \
-    defined(__aarch64__) && !defined(MBEDTLS_HAVE_ARM64)
-#define MBEDTLS_HAVE_ARM64
-#endif
+#if defined(MBEDTLS_AESCE_C) && defined(MBEDTLS_ARCH_IS_ARM64)
 
-#if defined(MBEDTLS_HAVE_ARM64)
+#define MBEDTLS_AESCE_HAVE_CODE
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#if defined(__linux__) && !defined(MBEDTLS_AES_USE_HARDWARE_ONLY)
+
+extern signed char mbedtls_aesce_has_support_result;
 
 /**
  * \brief          Internal function to detect the crypto extension in CPUs.
  *
  * \return         1 if CPU has support for the feature, 0 otherwise
  */
-int mbedtls_aesce_has_support(void);
+int mbedtls_aesce_has_support_impl(void);
+
+#define MBEDTLS_AESCE_HAS_SUPPORT() (mbedtls_aesce_has_support_result == -1 ? \
+                                     mbedtls_aesce_has_support_impl() : \
+                                     mbedtls_aesce_has_support_result)
+
+#else /* defined(__linux__) && !defined(MBEDTLS_AES_USE_HARDWARE_ONLY) */
+
+/* If we are not on Linux, we can't detect support so assume that it's supported.
+ * Similarly, assume support if MBEDTLS_AES_USE_HARDWARE_ONLY is set.
+ */
+#define MBEDTLS_AESCE_HAS_SUPPORT() 1
+
+#endif /* defined(__linux__) && !defined(MBEDTLS_AES_USE_HARDWARE_ONLY) */
 
 /**
  * \brief          Internal AES-ECB block encryption and decryption
+ *
+ * \warning        This assumes that the context specifies either 10, 12 or 14
+ *                 rounds and will behave incorrectly if this is not the case.
  *
  * \param ctx      AES context
  * \param mode     MBEDTLS_AES_ENCRYPT or MBEDTLS_AES_DECRYPT
@@ -111,6 +116,6 @@ int mbedtls_aesce_setkey_enc(unsigned char *rk,
 }
 #endif
 
-#endif /* MBEDTLS_HAVE_ARM64 */
+#endif /* MBEDTLS_AESCE_C && MBEDTLS_ARCH_IS_ARM64 */
 
 #endif /* MBEDTLS_AESCE_H */

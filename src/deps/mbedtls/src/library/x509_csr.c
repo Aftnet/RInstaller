@@ -2,19 +2,7 @@
  *  X.509 Certificate Signing Request (CSR) parsing
  *
  *  Copyright The Mbed TLS Contributors
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
  */
 /*
  *  The ITU-T X.509 standard defines a certificate format for PKI.
@@ -460,8 +448,7 @@ int mbedtls_x509_csr_parse_file(mbedtls_x509_csr *csr, const char *path)
 
     ret = mbedtls_x509_csr_parse(csr, buf, n);
 
-    mbedtls_platform_zeroize(buf, n);
-    mbedtls_free(buf);
+    mbedtls_zeroize_and_free(buf, n);
 
     return ret;
 }
@@ -578,8 +565,7 @@ void mbedtls_x509_csr_free(mbedtls_x509_csr *csr)
     mbedtls_asn1_sequence_free(csr->subject_alt_names.next);
 
     if (csr->raw.p != NULL) {
-        mbedtls_platform_zeroize(csr->raw.p, csr->raw.len);
-        mbedtls_free(csr->raw.p);
+        mbedtls_zeroize_and_free(csr->raw.p, csr->raw.len);
     }
 
     mbedtls_platform_zeroize(csr, sizeof(mbedtls_x509_csr));

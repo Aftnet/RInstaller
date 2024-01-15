@@ -3,19 +3,7 @@
  */
 /*
  *  Copyright The Mbed TLS Contributors
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
  */
 
 #include "common.h"
@@ -26,7 +14,7 @@
 #include "psa_crypto_core.h"
 #include "psa_crypto_ecp.h"
 #include "psa_crypto_random_impl.h"
-#include "hash_info.h"
+#include "md_psa.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -37,7 +25,9 @@
 #include <mbedtls/ecp.h>
 #include <mbedtls/error.h>
 
-#if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR) || \
+#if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_BASIC) || \
+    defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_IMPORT) || \
+    defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_EXPORT) || \
     defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_PUBLIC_KEY) || \
     defined(MBEDTLS_PSA_BUILTIN_ALG_ECDSA) || \
     defined(MBEDTLS_PSA_BUILTIN_ALG_DETERMINISTIC_ECDSA) || \
@@ -150,13 +140,16 @@ exit:
 
     return status;
 }
-#endif /* defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR) ||
+#endif /* defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_BASIC) ||
+        * defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_IMPORT) ||
+        * defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_EXPORT) ||
         * defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_PUBLIC_KEY) ||
         * defined(MBEDTLS_PSA_BUILTIN_ALG_ECDSA) ||
         * defined(MBEDTLS_PSA_BUILTIN_ALG_DETERMINISTIC_ECDSA) ||
         * defined(MBEDTLS_PSA_BUILTIN_ALG_ECDH) */
 
-#if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR) || \
+#if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_IMPORT) || \
+    defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_EXPORT) || \
     defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_PUBLIC_KEY)
 
 psa_status_t mbedtls_psa_ecp_import_key(
@@ -277,10 +270,11 @@ psa_status_t mbedtls_psa_ecp_export_public_key(
 
     return status;
 }
-#endif /* defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR) ||
+#endif /* defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_IMPORT) ||
+        * defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_EXPORT) ||
         * defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_PUBLIC_KEY) */
 
-#if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR)
+#if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_GENERATE)
 psa_status_t mbedtls_psa_ecp_generate_key(
     const psa_key_attributes_t *attributes,
     uint8_t *key_buffer, size_t key_buffer_size, size_t *key_buffer_length)
@@ -325,7 +319,7 @@ psa_status_t mbedtls_psa_ecp_generate_key(
 
     return status;
 }
-#endif /* defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR) */
+#endif /* MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_GENERATE */
 
 /****************************************************************/
 /* ECDSA sign/verify */
@@ -366,7 +360,7 @@ psa_status_t mbedtls_psa_ecdsa_sign_hash(
     if (PSA_ALG_ECDSA_IS_DETERMINISTIC(alg)) {
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_DETERMINISTIC_ECDSA)
         psa_algorithm_t hash_alg = PSA_ALG_SIGN_GET_HASH(alg);
-        mbedtls_md_type_t md_alg = mbedtls_hash_info_md_from_psa(hash_alg);
+        mbedtls_md_type_t md_alg = mbedtls_md_type_from_psa_alg(hash_alg);
         MBEDTLS_MPI_CHK(mbedtls_ecdsa_sign_det_ext(
                             &ecp->grp, &r, &s,
                             &ecp->d, hash,

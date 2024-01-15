@@ -21,19 +21,7 @@
  */
 /*
  *  Copyright The Mbed TLS Contributors
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
  */
 
 #ifndef PSA_CRYPTO_VALUES_H
@@ -2102,7 +2090,8 @@
  */
 #define PSA_ALG_IS_PBKDF2_HMAC(alg)                                    \
     (((alg) & ~PSA_ALG_HASH_MASK) == PSA_ALG_PBKDF2_HMAC_BASE)
-
+#define PSA_ALG_PBKDF2_HMAC_GET_HASH(pbkdf2_alg)                         \
+    (PSA_ALG_CATEGORY_HASH | ((pbkdf2_alg) & PSA_ALG_HASH_MASK))
 /** The PBKDF2-AES-CMAC-PRF-128 password hashing / key stretching algorithm.
  *
  * PBKDF2 is defined by PKCS#5, republished as RFC 8018 (section 5.2).
@@ -2113,6 +2102,10 @@
  * #PSA_ALG_PBKDF2_HMAC() with the same constraints.
  */
 #define PSA_ALG_PBKDF2_AES_CMAC_PRF_128         ((psa_algorithm_t) 0x08800200)
+
+#define PSA_ALG_IS_PBKDF2(kdf_alg)                                      \
+    (PSA_ALG_IS_PBKDF2_HMAC(kdf_alg) || \
+     ((kdf_alg) == PSA_ALG_PBKDF2_AES_CMAC_PRF_128))
 
 #define PSA_ALG_KEY_DERIVATION_MASK             ((psa_algorithm_t) 0xfe00ffff)
 #define PSA_ALG_KEY_AGREEMENT_MASK              ((psa_algorithm_t) 0xffff0000)

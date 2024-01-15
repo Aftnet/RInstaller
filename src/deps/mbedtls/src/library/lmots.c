@@ -2,19 +2,7 @@
  * The LM-OTS one-time public-key signature scheme
  *
  * Copyright The Mbed TLS Contributors
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
  */
 
 /*
@@ -41,13 +29,19 @@
 #include "mbedtls/lms.h"
 #include "mbedtls/platform_util.h"
 #include "mbedtls/error.h"
-#include "mbedtls/psa_util.h"
+#include "psa_util_internal.h"
 
 #include "psa/crypto.h"
 
-#define PSA_TO_MBEDTLS_ERR(status) PSA_TO_MBEDTLS_ERR_LIST(status,   \
-                                                           psa_to_lms_errors,             \
-                                                           psa_generic_status_to_mbedtls)
+/* Define a local translating function to save code size by not using too many
+ * arguments in each translating place. */
+static int local_err_translation(psa_status_t status)
+{
+    return psa_status_to_mbedtls(status, psa_to_lms_errors,
+                                 ARRAY_LENGTH(psa_to_lms_errors),
+                                 psa_generic_status_to_mbedtls);
+}
+#define PSA_TO_MBEDTLS_ERR(status) local_err_translation(status)
 
 #define PUBLIC_KEY_TYPE_OFFSET     (0)
 #define PUBLIC_KEY_I_KEY_ID_OFFSET (PUBLIC_KEY_TYPE_OFFSET + \
@@ -432,8 +426,10 @@ int mbedtls_lmots_import_public_key(mbedtls_lmots_public_t *ctx,
     }
 
     ctx->params.type =
-        mbedtls_lms_network_bytes_to_unsigned_int(MBEDTLS_LMOTS_TYPE_LEN,
-                                                  key + MBEDTLS_LMOTS_SIG_TYPE_OFFSET);
+        (mbedtls_lmots_algorithm_type_t) mbedtls_lms_network_bytes_to_unsigned_int(
+            MBEDTLS_LMOTS_TYPE_LEN,
+            key +
+            MBEDTLS_LMOTS_SIG_TYPE_OFFSET);
 
     if (key_len != MBEDTLS_LMOTS_PUBLIC_KEY_LEN(ctx->params.type)) {
         return MBEDTLS_ERR_LMS_BAD_INPUT_DATA;

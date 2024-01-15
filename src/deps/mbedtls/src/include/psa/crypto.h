@@ -4,19 +4,7 @@
  */
 /*
  *  Copyright The Mbed TLS Contributors
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
  */
 
 #ifndef PSA_CRYPTO_H
@@ -4407,9 +4395,9 @@ psa_status_t psa_sign_hash_start(
  * \retval #PSA_ERROR_BUFFER_TOO_SMALL
  *         The size of the \p signature buffer is too small. You can
  *         determine a sufficient buffer size by calling
- *         #PSA_SIGN_OUTPUT_SIZE(\c key_type, \c key_bits, \p alg)
+ *         #PSA_SIGN_OUTPUT_SIZE(\c key_type, \c key_bits, \c alg)
  *         where \c key_type and \c key_bits are the type and bit-size
- *         respectively of \p key.
+ *         respectively of \c key.
  *
  * \retval #PSA_ERROR_BAD_STATE
  *         An operation was not previously started on this context via

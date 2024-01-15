@@ -2,19 +2,7 @@
  *  X.509 Certificate Revocation List (CRL) parsing
  *
  *  Copyright The Mbed TLS Contributors
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
  */
 /*
  *  The ITU-T X.509 standard defines a certificate format for PKI.
@@ -587,8 +575,7 @@ int mbedtls_x509_crl_parse_file(mbedtls_x509_crl *chain, const char *path)
 
     ret = mbedtls_x509_crl_parse(chain, buf, n);
 
-    mbedtls_platform_zeroize(buf, n);
-    mbedtls_free(buf);
+    mbedtls_zeroize_and_free(buf, n);
 
     return ret;
 }
@@ -704,14 +691,12 @@ void mbedtls_x509_crl_free(mbedtls_x509_crl *crl)
         while (entry_cur != NULL) {
             entry_prv = entry_cur;
             entry_cur = entry_cur->next;
-            mbedtls_platform_zeroize(entry_prv,
+            mbedtls_zeroize_and_free(entry_prv,
                                      sizeof(mbedtls_x509_crl_entry));
-            mbedtls_free(entry_prv);
         }
 
         if (crl_cur->raw.p != NULL) {
-            mbedtls_platform_zeroize(crl_cur->raw.p, crl_cur->raw.len);
-            mbedtls_free(crl_cur->raw.p);
+            mbedtls_zeroize_and_free(crl_cur->raw.p, crl_cur->raw.len);
         }
 
         crl_prv = crl_cur;
