@@ -4,9 +4,11 @@
 #include "mbedtls/x509_crt.h"
 #include "mbedtls/entropy.h"
 #include <mbedtls/ctr_drbg.h>
-#include <array>
 #include <string>
 #include <iostream>
+#include <vector>
+#include <span>
+#include <iomanip>
 
 void CertStore::Init()
 {
@@ -34,7 +36,7 @@ void CertStore::Init()
         throw;
     }
 
-    std::array<unsigned char, 8192> privkey, pubkey;
+    std::vector<unsigned char> privkey(4096), pubkey(4096);
     if (mbedtls_pk_write_key_pem(&key, privkey.data(), privkey.size()))
     {
         throw;
@@ -50,7 +52,7 @@ void CertStore::Init()
 	mbedtls_x509write_cert crt;
 	mbedtls_x509write_crt_init(&crt);
 
-    auto certName = "CN=RInstaller";
+    auto subjName = "CN=RInstaller";
 
     mbedtls_x509write_crt_set_md_alg(&crt, MBEDTLS_MD_SHA256);
     mbedtls_x509write_crt_set_subject_key(&crt, &key);
@@ -65,11 +67,11 @@ void CertStore::Init()
     }
     mbedtls_mpi_free(&serial);
 
-    if (mbedtls_x509write_crt_set_subject_name(&crt, certName))
+    if (mbedtls_x509write_crt_set_subject_name(&crt, subjName))
     {
         throw;
     }
-    if (mbedtls_x509write_crt_set_issuer_name(&crt, certName))
+    if (mbedtls_x509write_crt_set_issuer_name(&crt, subjName))
     {
         throw;
     }
@@ -86,11 +88,42 @@ void CertStore::Init()
         throw;
     }
 
-    std::array<unsigned char, 8192> crtBuf;
+    std::vector<unsigned char> crtBuf(8192);
     if (mbedtls_x509write_crt_pem(&crt, crtBuf.data(), crtBuf.size(), mbedtls_ctr_drbg_random, &ctr_drbg))
     {
         throw;
     }
 
     std::cout << crtBuf.data();
+
+    auto crtLen = mbedtls_x509write_crt_der(&crt, crtBuf.data(), crtBuf.size(), mbedtls_ctr_drbg_random, &ctr_drbg);
+    if (crtLen < 0)
+    {
+        throw;
+    }
+
+    mbedtls_sha1_context sha1;
+    mbedtls_sha1_init(&sha1);
+    if (mbedtls_sha1_starts(&sha1))
+    {
+        throw;
+    }
+
+    if (mbedtls_sha1_update(&sha1, crtBuf.data() + (crtBuf.size() -  crtLen), crtLen))
+    {
+        throw;
+    }
+
+    std::vector<unsigned char> shaBuf(20);
+    if (mbedtls_sha1_finish(&sha1, shaBuf.data()))
+    {
+        throw;
+    }
+    mbedtls_sha1_free(&sha1);
+
+    std::cout << "Fingerprint: ";
+    for (auto i = 0; i < shaBuf.size(); i++)
+    {
+        std::cout << std::hex << std::setfill('0') << std::setw(2) << (int)shaBuf[i];
+    }
 }
