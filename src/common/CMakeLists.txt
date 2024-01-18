@@ -8,12 +8,13 @@ PRIVATE
 
 target_sources(common
 PUBLIC
+    include/certstore.h
     include/protocol.h
 PRIVATE
-    empty.cpp
+    certstore.cpp
 )
 
 target_link_libraries(common
 PUBLIC
-    mongoose
+    mbedtls
 )

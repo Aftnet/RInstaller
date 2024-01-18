@@ -10,9 +10,7 @@ extern "C" {
 
     enum rinst_message_type
     {
-        helo,
-        disconnect,
-        lol,
+        CONNECT,
     };
 
     struct rinst_message
