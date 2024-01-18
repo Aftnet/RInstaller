@@ -47,6 +47,50 @@ void CertStore::Init()
     std::cout << privkey.data();
     std::cout << pubkey.data();
 
-	mbedtls_x509write_cert cert;
-	mbedtls_x509write_crt_init(&cert);
+	mbedtls_x509write_cert crt;
+	mbedtls_x509write_crt_init(&crt);
+
+    auto certName = "CN=RInstaller";
+
+    mbedtls_x509write_crt_set_md_alg(&crt, MBEDTLS_MD_SHA256);
+    mbedtls_x509write_crt_set_subject_key(&crt, &key);
+    mbedtls_x509write_crt_set_issuer_key(&crt, &key);
+
+    mbedtls_mpi serial;
+    mbedtls_mpi_init(&serial);
+    mbedtls_mpi_lset(&serial, 1);
+    if (mbedtls_x509write_crt_set_serial(&crt, &serial))
+    {
+        throw;
+    }
+    mbedtls_mpi_free(&serial);
+
+    if (mbedtls_x509write_crt_set_subject_name(&crt, certName))
+    {
+        throw;
+    }
+    if (mbedtls_x509write_crt_set_issuer_name(&crt, certName))
+    {
+        throw;
+    }
+    if (mbedtls_x509write_crt_set_basic_constraints(&crt, 0, -1))
+    {
+        throw;
+    }
+    if (mbedtls_x509write_crt_set_key_usage(&crt, MBEDTLS_X509_KU_KEY_AGREEMENT))
+    {
+        throw;
+    }
+    if (mbedtls_x509write_crt_set_validity(&crt, "19000101000000", "22000101000000"))
+    {
+        throw;
+    }
+
+    std::array<unsigned char, 8192> crtBuf;
+    if (mbedtls_x509write_crt_pem(&crt, crtBuf.data(), crtBuf.size(), mbedtls_ctr_drbg_random, &ctr_drbg))
+    {
+        throw;
+    }
+
+    std::cout << crtBuf.data();
 }
