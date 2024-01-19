@@ -9,6 +9,8 @@
 #include <vector>
 #include <span>
 #include <iomanip>
+#include <memory>
+#include <format>
 
 void CertStore::Init()
 {
@@ -102,28 +104,44 @@ void CertStore::Init()
         throw;
     }
 
-    mbedtls_sha1_context sha1;
-    mbedtls_sha1_init(&sha1);
-    if (mbedtls_sha1_starts(&sha1))
+    std::vector<unsigned char>(crtBuf.begin() + (crtBuf.size() - crtLen), crtBuf.end()).swap(crtBuf);
+    std::cout << "Fingerprint: " << GetSha1Thumbprint(crtBuf);
+}
+
+struct mbedtls_sha1_context_deleter
+{
+    void operator()(mbedtls_sha1_context* d) const
     {
-        throw;
+        mbedtls_sha1_free(d);
+    }
+};
+
+std::string CertStore::GetSha1Thumbprint(const std::vector<unsigned char>& input)
+{
+    std::unique_ptr<mbedtls_sha1_context> sha1(new mbedtls_sha1_context);
+    mbedtls_sha1_init(sha1.get());
+    if (mbedtls_sha1_starts(sha1.get()))
+    {
+        throw std::runtime_error("Failied initializing sha1");
     }
 
-    if (mbedtls_sha1_update(&sha1, crtBuf.data() + (crtBuf.size() -  crtLen), crtLen))
+    if (mbedtls_sha1_update(sha1.get(), input.data(), input.size()))
     {
-        throw;
+        throw std::runtime_error("Failied updating sha1");
     }
 
-    std::vector<unsigned char> shaBuf(20);
-    if (mbedtls_sha1_finish(&sha1, shaBuf.data()))
+    constexpr int shaBufLen = 20;
+    std::vector<unsigned char> shaBuf(shaBufLen);
+    if (mbedtls_sha1_finish(sha1.get(), shaBuf.data()))
     {
-        throw;
+        throw std::runtime_error("Failied computing sha1");;
     }
-    mbedtls_sha1_free(&sha1);
 
-    std::cout << "Fingerprint: ";
-    for (auto i = 0; i < shaBuf.size(); i++)
+    std::string outStr;
+    for (auto i : shaBuf)
     {
-        std::cout << std::hex << std::setfill('0') << std::setw(2) << (int)shaBuf[i];
+        std::format_to(std::back_inserter(outStr), "{:02x}", i);
     }
+
+    return outStr;
 }
