@@ -13,6 +13,7 @@ if(CMAKE_TOOLCHAIN_FILE)
     if(CMAKE_TOOLCHAIN_FILENAME STREQUAL "Switch.cmake")
         list(APPEND CURRENT_TARGET_PLATFORM_DEFINES
             unix
+            _POSIX_VERSION=199309L
         )
     endif()
 endif()
