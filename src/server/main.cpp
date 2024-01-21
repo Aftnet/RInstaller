@@ -3,11 +3,12 @@
 #include <string>
 
 #include "certstore.h"
+#include "mbedtlsmgr.h"
 
 int main()
 {
-    CertStore stor;
-    stor.Init();
+    auto& mbedtlsmgr = MbedtlsMgr::GetInstance();
+    CertStore store(mbedtlsmgr);
 
     return 0;
 }
