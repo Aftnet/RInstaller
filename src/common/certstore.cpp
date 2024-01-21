@@ -6,9 +6,10 @@
 #include "mbedtls/x509.h"
 #include "mbedtls/x509_crt.h"
 
-CertStore::CertStore(const MbedtlsMgr& mgr) :
+CertStore::CertStore(const MbedtlsMgr& mgr, const std::filesystem::path& backingDir) :
     MbedTLS_Entropy(mgr.Entropy()),
-    MbedTLS_Ctr_Drdbg(mgr.Ctr_Drdbg())
+    MbedTLS_Ctr_Drdbg(mgr.Ctr_Drdbg()),
+    BackingDir(backingDir)
 {
 
 }

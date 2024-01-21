@@ -8,6 +8,7 @@
 int main()
 {
     auto& mbedtlsmgr = MbedtlsMgr::GetInstance();
+
     CertStore store(mbedtlsmgr);
 
     return 0;
