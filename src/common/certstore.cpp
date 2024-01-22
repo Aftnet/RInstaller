@@ -6,9 +6,7 @@
 #include "mbedtls/x509.h"
 #include "mbedtls/x509_crt.h"
 
-CertStore::CertStore(const MbedtlsMgr& mgr, const std::filesystem::path& backingDir) :
-    MbedTLS_Entropy(mgr.Entropy()),
-    MbedTLS_Ctr_Drdbg(mgr.Ctr_Drdbg()),
+CertStore::CertStore(const std::filesystem::path& backingDir) :
     BackingDir(backingDir)
 {
 
@@ -25,7 +23,7 @@ std::tuple<std::unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)>, st
         throw std::runtime_error("Unable to generate key pair");
     }
 
-    if (mbedtls_rsa_gen_key(mbedtls_pk_rsa(*key.get()), mbedtls_ctr_drbg_random, MbedTLS_Ctr_Drdbg.get(), RsaKeySize, 65537))
+    if (mbedtls_rsa_gen_key(mbedtls_pk_rsa(*key.get()), mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg(), RsaKeySize, 65537))
     {
         throw std::runtime_error("Unable to generate key pair");
     }

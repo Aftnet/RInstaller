@@ -9,7 +9,7 @@
 int main()
 {
     auto& mbedtlsmgr = MbedtlsMgr::GetInstance();
-    CertStore store(mbedtlsmgr, std::filesystem::current_path());
+    CertStore store(std::filesystem::current_path());
 
     return 0;
 }
