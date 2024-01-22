@@ -1,15 +1,60 @@
 #include "certstore.h"
 
-#include "mbedtlsmgr.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/x509.h"
 #include "mbedtls/x509_crt.h"
+#include "mbedtlsmgr.h"
+
+#include <fstream>
 
 CertStore::CertStore(const std::filesystem::path& backingDir) :
     BackingDir(backingDir)
 {
+    auto keyPath = backingDir;
+    keyPath.append("key.der");
+    auto certPath = backingDir;
+    certPath.append("crt.der");
 
+    bool loadSuccess = true;
+    if (std::filesystem::is_regular_file(certPath) && std::filesystem::exists(certPath) &&
+        std::filesystem::is_regular_file(keyPath) && std::filesystem::exists(keyPath))
+    {
+
+    }
+
+    if (!loadSuccess)
+    {
+        auto generated = GenerateKeyAndCertificate();
+        std::vector<char> buffer(4096);
+        std::ofstream outFile;
+
+        outFile.open(keyPath, std::ofstream::binary | std::ofstream::trunc);
+        if (outFile.bad())
+        {
+            throw std::runtime_error("Unable to open key file for writing");
+        }
+        auto dataLen = mbedtls_pk_write_key_der(std::get<0>(generated).get(), (unsigned char*)buffer.data(), buffer.size());
+        if (dataLen < 1)
+        {
+            throw std::runtime_error("Unable to convert cert to DER");
+        }
+        outFile.write(buffer.data() + (buffer.size() - dataLen), dataLen);
+        outFile.close();
+
+        outFile.open(certPath, std::ofstream::binary | std::ofstream::trunc);
+        if (outFile.bad())
+        {
+            throw std::runtime_error("Unable to open cert file for writing");
+        }
+        dataLen = mbedtls_x509write_crt_der(std::get<1>(generated).get(), (unsigned char*)buffer.data(), buffer.size(), mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg());
+        if (dataLen < 1)
+        {
+            throw std::runtime_error("Unable to convert cert to DER");
+        }
+        outFile.write(buffer.data() + (buffer.size() - dataLen), dataLen);
+        outFile.close();
+    }
 }
 
 std::tuple<std::unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)>, std::unique_ptr<mbedtls_x509write_cert, void(*)(mbedtls_x509write_cert*)>> CertStore::GenerateKeyAndCertificate()
