@@ -7,6 +7,7 @@
 #include "mbedtlsmgr.h"
 
 #include <fstream>
+#include <format>
 
 CertStore::CertStore(const std::filesystem::path& backingDir) :
     BackingDir(backingDir)
