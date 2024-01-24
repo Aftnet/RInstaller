@@ -47,27 +47,21 @@ CertStore::CertStore(const std::filesystem::path& backingDir) :
 
     bool loadSuccess = false;
     {
-        std::ifstream keyFile(keyPath, std::ios::in | std::ios::binary | std::ios::ate);
-        std::ifstream certFile(certPath, std::ios::in | std::ios::binary | std::ios::ate);
+        std::ifstream keyFile(keyPath, std::ios::binary | std::ios::ate);
+        std::ifstream certFile(certPath, std::ios::binary | std::ios::ate);
         if (keyFile.is_open() && certFile.is_open())
         {
             try
             {
-                std::vector<unsigned char> buffer(keyFile.tellg());
-                keyFile.seekg(0, std::ios::beg);
-                keyFile.read((char*)buffer.data(), buffer.size());
-                if (mbedtls_pk_parse_key(PrivateKey.get(), buffer.data(), buffer.size(), nullptr, 0, mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg()))
-                {
-                    throw std::runtime_error("Unable to import key file");
-                }
+                std::vector<unsigned char> keyBuffer(keyFile.tellg()), certBuffer(certFile.tellg());
 
-                buffer.resize(certFile.tellg());
+                keyFile.seekg(0, std::ios::beg);
+                keyFile.read((char*)keyBuffer.data(), keyBuffer.size());
+                LoadPrivateKey(keyBuffer);
+
                 certFile.seekg(std::ios::beg);
-                certFile.read((char*)buffer.data(), buffer.size());
-                if(mbedtls_x509_crt_parse_der(Certificate.get(), buffer.data(), buffer.size()))
-                {
-                    throw std::runtime_error("Unable to import cert file");
-                }
+                certFile.read((char*)certBuffer.data(), certBuffer.size());
+                LoadCertificate(certBuffer);
 
                 loadSuccess = true;
             }
@@ -78,44 +72,34 @@ CertStore::CertStore(const std::filesystem::path& backingDir) :
     
     if (!loadSuccess)
     {
-        auto generated = GenerateKeyAndCertificate();
-        std::vector<char> buffer(4096);
-        std::ofstream outFile;
+        auto generated = GenerateKeyAndCertificateDer();
+        auto& keyBuffer = std::get<0>(generated);
+        auto& certBuffer = std::get<1>(generated);
+        LoadPrivateKey(keyBuffer);
+        LoadCertificate(certBuffer);
 
-        outFile.open(keyPath, std::ofstream::binary | std::ofstream::trunc);
-        if (outFile.bad())
+        std::ofstream keyFile(keyPath, std::ios::binary | std::ios::trunc);
+        std::ofstream certFile(certPath, std::ios::binary | std::ios::trunc);
+
+        if (keyFile.is_open())
         {
             throw std::runtime_error("Unable to open key file for writing");
         }
-        auto dataLen = mbedtls_pk_write_key_der(std::get<0>(generated).get(), (unsigned char*)buffer.data(), buffer.size());
-        if (dataLen < 1)
-        {
-            throw std::runtime_error("Unable to convert cert to DER");
-        }
-        outFile.write(buffer.data() + (buffer.size() - dataLen), dataLen);
-        outFile.close();
+        keyFile.write((const char*)keyBuffer.data(), keyBuffer.size());
 
-        outFile.open(certPath, std::ofstream::binary | std::ofstream::trunc);
-        if (outFile.bad())
+        if (certFile.is_open())
         {
             throw std::runtime_error("Unable to open cert file for writing");
         }
-        dataLen = mbedtls_x509write_crt_der(std::get<1>(generated).get(), (unsigned char*)buffer.data(), buffer.size(), mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg());
-        if (dataLen < 1)
-        {
-            throw std::runtime_error("Unable to convert cert to DER");
-        }
-        outFile.write(buffer.data() + (buffer.size() - dataLen), dataLen);
-        outFile.close();
+        certFile.write((const char*)certBuffer.data(), certBuffer.size());
     }
 }
 
-std::tuple<std::unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)>, std::unique_ptr<mbedtls_x509write_cert, void(*)(mbedtls_x509write_cert*)>> CertStore::GenerateKeyAndCertificate()
+std::tuple<std::vector<unsigned char>, std::vector<unsigned char>> CertStore::GenerateKeyAndCertificateDer()
 {
     constexpr unsigned int RsaKeySize = 2048;
 
-    std::unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)> key(new mbedtls_pk_context, [](mbedtls_pk_context* d) {  });
-    mbedtls_pk_init(key.get());
+    std::unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)> key(NewMbedTlsPkContext(), FreeMbedTlsPkContext);
     if (mbedtls_pk_setup(key.get(), mbedtls_pk_info_from_type(MBEDTLS_PK_RSA)))
     {
         throw std::runtime_error("Unable to generate key pair");
@@ -124,6 +108,17 @@ std::tuple<std::unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)>, st
     if (mbedtls_rsa_gen_key(mbedtls_pk_rsa(*key.get()), mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg(), RsaKeySize, 65537))
     {
         throw std::runtime_error("Unable to generate key pair");
+    }
+
+    std::vector<unsigned char> keyBuffer(RsaKeySize);
+    auto dataLen = mbedtls_pk_write_key_der(key.get(), (unsigned char*)keyBuffer.data(), keyBuffer.size());
+    if (dataLen < 1)
+    {
+        throw std::runtime_error("Unable to convert cert to DER");
+    }
+    {
+        auto tmpBuffer = std::vector(keyBuffer.end() - dataLen, keyBuffer.end());
+        keyBuffer.swap(tmpBuffer);
     }
 
     std::unique_ptr<mbedtls_x509write_cert, void(*)(mbedtls_x509write_cert*)> crt(new mbedtls_x509write_cert, [](mbedtls_x509write_cert* d) { mbedtls_x509write_crt_free(d); delete d; });
@@ -164,7 +159,34 @@ std::tuple<std::unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)>, st
         throw std::runtime_error("Unable to generate certificate");
     }
 
-    return std::make_tuple(std::move(key), std::move(crt));
+    std::vector<unsigned char> certBuffer(RsaKeySize);
+    dataLen = mbedtls_x509write_crt_der(crt.get(), certBuffer.data(), certBuffer.size(), mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg());
+    if (dataLen < 1)
+    {
+        throw std::runtime_error("Unable to convert cert to DER");
+    }
+    {
+        auto tmpBuffer = std::vector(certBuffer.end() - dataLen, certBuffer.end());
+        certBuffer.swap(tmpBuffer);
+    }
+
+    return std::make_tuple(std::move(keyBuffer), std::move(certBuffer));
+}
+
+void CertStore::LoadPrivateKey(const std::vector<unsigned char>& buffer)
+{
+    if (mbedtls_pk_parse_key(PrivateKey.get(), buffer.data(), buffer.size(), nullptr, 0, mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg()))
+    {
+        throw std::runtime_error("Unable to import key from der");
+    }
+}
+
+void CertStore::LoadCertificate(const std::vector<unsigned char>& buffer)
+{
+    if (mbedtls_x509_crt_parse_der(Certificate.get(), buffer.data(), buffer.size()))
+    {
+        throw std::runtime_error("Unable to import cert from der");
+    }
 }
 
 std::string CertStore::GetSha1Thumbprint(const std::vector<unsigned char>& input)
