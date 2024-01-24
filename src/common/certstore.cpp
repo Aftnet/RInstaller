@@ -81,13 +81,13 @@ CertStore::CertStore(const std::filesystem::path& backingDir) :
         std::ofstream keyFile(keyPath, std::ios::binary | std::ios::trunc);
         std::ofstream certFile(certPath, std::ios::binary | std::ios::trunc);
 
-        if (keyFile.is_open())
+        if (!keyFile.is_open())
         {
             throw std::runtime_error("Unable to open key file for writing");
         }
         keyFile.write((const char*)keyBuffer.data(), keyBuffer.size());
 
-        if (certFile.is_open())
+        if (!certFile.is_open())
         {
             throw std::runtime_error("Unable to open cert file for writing");
         }
