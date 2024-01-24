@@ -9,21 +9,73 @@
 #include <fstream>
 #include <format>
 
+mbedtls_pk_context* CertStore::NewMbedTlsPkContext()
+{
+    auto ctx = new mbedtls_pk_context;
+    mbedtls_pk_init(ctx);
+    return ctx;
+}
+
+void CertStore::FreeMbedTlsPkContext(mbedtls_pk_context* ctx)
+{
+    mbedtls_pk_free(ctx);
+    delete ctx;
+}
+
+mbedtls_x509_crt* CertStore::NewMbedTlsCertContext()
+{
+    auto ctx = new mbedtls_x509_crt;
+    mbedtls_x509_crt_init(ctx);
+    return ctx;
+}
+
+void CertStore::FreeMbedTlsCertContext(mbedtls_x509_crt* ctx)
+{
+    mbedtls_x509_crt_free(ctx);
+    delete ctx;
+}
+
 CertStore::CertStore(const std::filesystem::path& backingDir) :
-    BackingDir(backingDir)
+    BackingDir(backingDir),
+    PrivateKey(NewMbedTlsPkContext(), FreeMbedTlsPkContext),
+    Certificate(NewMbedTlsCertContext(), FreeMbedTlsCertContext)
 {
     auto keyPath = backingDir;
     keyPath.append("key.der");
     auto certPath = backingDir;
     certPath.append("crt.der");
 
-    bool loadSuccess = true;
-    if (std::filesystem::is_regular_file(certPath) && std::filesystem::exists(certPath) &&
-        std::filesystem::is_regular_file(keyPath) && std::filesystem::exists(keyPath))
+    bool loadSuccess = false;
     {
+        std::ifstream keyFile(keyPath, std::ios::in | std::ios::binary | std::ios::ate);
+        std::ifstream certFile(certPath, std::ios::in | std::ios::binary | std::ios::ate);
+        if (keyFile.is_open() && certFile.is_open())
+        {
+            try
+            {
+                std::vector<unsigned char> buffer(keyFile.tellg());
+                keyFile.seekg(0, std::ios::beg);
+                keyFile.read((char*)buffer.data(), buffer.size());
+                if (mbedtls_pk_parse_key(PrivateKey.get(), buffer.data(), buffer.size(), nullptr, 0, mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg()))
+                {
+                    throw std::runtime_error("Unable to import key file");
+                }
 
+                buffer.resize(certFile.tellg());
+                certFile.seekg(std::ios::beg);
+                certFile.read((char*)buffer.data(), buffer.size());
+                if(mbedtls_x509_crt_parse_der(Certificate.get(), buffer.data(), buffer.size()))
+                {
+                    throw std::runtime_error("Unable to import cert file");
+                }
+
+                loadSuccess = true;
+            }
+            catch(std::exception)
+            {}
+        }
     }
-
+    
     if (!loadSuccess)
     {
         auto generated = GenerateKeyAndCertificate();
@@ -62,7 +114,7 @@ std::tuple<std::unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)>, st
 {
     constexpr unsigned int RsaKeySize = 2048;
 
-    std::unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)> key(new mbedtls_pk_context, [](mbedtls_pk_context* d) { mbedtls_pk_free(d); delete d; });
+    std::unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)> key(new mbedtls_pk_context, [](mbedtls_pk_context* d) {  });
     mbedtls_pk_init(key.get());
     if (mbedtls_pk_setup(key.get(), mbedtls_pk_info_from_type(MBEDTLS_PK_RSA)))
     {
