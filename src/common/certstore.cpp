@@ -259,7 +259,7 @@ void CertStore::LoadCertificate(const std::vector<unsigned char>& buffer)
     }
 }
 
-std::string CertStore::GetSha1Thumbprint(const std::span<unsigned char> input)
+std::string CertStore::GetSha1Thumbprint(const std::span<unsigned char>& input)
 {
     std::unique_ptr<mbedtls_sha1_context, void(*)(mbedtls_sha1_context*)> sha1(new mbedtls_sha1_context, [](mbedtls_sha1_context* d) { mbedtls_sha1_free(d); });
 

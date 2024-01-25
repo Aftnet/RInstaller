@@ -56,5 +56,5 @@ private:
 	static std::tuple<std::vector<unsigned char>, std::vector<unsigned char>> GenerateKeyAndCertificateDer();
 	void LoadPrivateKey(const std::vector<unsigned char>&);
 	void LoadCertificate(const std::vector<unsigned char>&);
-	static std::string GetSha1Thumbprint(const std::span<unsigned char>);
+	static std::string GetSha1Thumbprint(const std::span<unsigned char>&);
 };
