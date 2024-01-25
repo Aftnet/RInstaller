@@ -35,10 +35,44 @@ void CertStore::FreeMbedTlsCertContext(mbedtls_x509_crt* ctx)
     delete ctx;
 }
 
+CertStore::ThumbprintStore::ThumbprintStore(const std::filesystem::path& backingFile) :
+    BackingFile(backingFile)
+{
+    std::ifstream storeFile(BackingFile);
+    if (storeFile.is_open())
+    {
+        std::string thumbPrint;
+        while (storeFile >> thumbPrint)
+        {
+            Store.insert(thumbPrint);
+        }
+    }
+}
+
+bool CertStore::ThumbprintStore::Contains(const std::string& thumbprint) const
+{
+    return Store.contains(thumbprint);
+}
+
+void CertStore::ThumbprintStore::Add(const std::string& thumbprint)
+{
+    Store.insert(thumbprint);
+    std::ofstream storeFile(BackingFile, std::ios::ate | std::ios::app);
+    storeFile << thumbprint << std::endl;
+}
+
+void CertStore::ThumbprintStore::Clear()
+{
+    Store.clear();
+    std::ofstream storeFile(BackingFile, std::ios::trunc);
+}
+
 CertStore::CertStore(const std::filesystem::path& backingDir) :
     BackingDir(backingDir),
     PrivateKey(NewMbedTlsPkContext(), FreeMbedTlsPkContext),
-    Certificate(NewMbedTlsCertContext(), FreeMbedTlsCertContext)
+    Certificate(NewMbedTlsCertContext(), FreeMbedTlsCertContext),
+    AllowedCertificates(std::filesystem::path(backingDir).append("allowed.txt")),
+    DeniedCertificates(std::filesystem::path(backingDir).append("denied.txt"))
 {
     auto keyPath = backingDir;
     keyPath.append("key.der");
@@ -65,8 +99,9 @@ CertStore::CertStore(const std::filesystem::path& backingDir) :
 
                 loadSuccess = true;
             }
-            catch(std::exception)
-            {}
+            catch (std::exception)
+            {
+            }
         }
     }
     
@@ -93,6 +128,36 @@ CertStore::CertStore(const std::filesystem::path& backingDir) :
         }
         certFile.write((const char*)certBuffer.data(), certBuffer.size());
     }
+}
+
+void CertStore::AddAllowedCertificate(mbedtls_x509_crt& cert)
+{
+    auto hash = GetSha1Thumbprint(std::span(cert.raw.p, cert.raw.p + cert.raw.len));
+    AllowedCertificates.Add(hash);
+}
+
+void CertStore::AddDeniedCertificate(mbedtls_x509_crt& cert)
+{
+    auto hash = GetSha1Thumbprint(std::span(cert.raw.p, cert.raw.p + cert.raw.len));
+    DeniedCertificates.Add(hash);
+}
+
+bool CertStore::CertificateIsAllowed(mbedtls_x509_crt& cert)
+{
+    auto hash = GetSha1Thumbprint(std::span(cert.raw.p, cert.raw.p + cert.raw.len));
+    return AllowedCertificates.Contains(hash);
+}
+
+bool CertStore::CertificateIsDenied(mbedtls_x509_crt& cert)
+{
+    auto hash = GetSha1Thumbprint(std::span(cert.raw.p, cert.raw.p + cert.raw.len));
+    return DeniedCertificates.Contains(hash);
+}
+
+void CertStore::ClearKnownCertificates()
+{
+    AllowedCertificates.Clear();
+    DeniedCertificates.Clear();
 }
 
 std::tuple<std::vector<unsigned char>, std::vector<unsigned char>> CertStore::GenerateKeyAndCertificateDer()
@@ -189,7 +254,7 @@ void CertStore::LoadCertificate(const std::vector<unsigned char>& buffer)
     }
 }
 
-std::string CertStore::GetSha1Thumbprint(const std::vector<unsigned char>& input)
+std::string CertStore::GetSha1Thumbprint(const std::span<unsigned char> input)
 {
     std::unique_ptr<mbedtls_sha1_context, void(*)(mbedtls_sha1_context*)> sha1(new mbedtls_sha1_context, [](mbedtls_sha1_context* d) { mbedtls_sha1_free(d); });
 
