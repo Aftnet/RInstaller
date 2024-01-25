@@ -9,6 +9,16 @@
 #include <fstream>
 #include <format>
 
+namespace
+{
+    const std::string AllowedCertificatesFileName("allowed_certs.txt");
+    const std::string DeniedCertificatesFileName("denied_certs.txt");
+    const std::string HostKeyFileName("host_key.der");
+    const std::string HostCertificateFileName("host_cert.der");
+
+    constexpr unsigned int RsaKeySize = 2048;
+}
+
 mbedtls_pk_context* CertStore::NewMbedTlsPkContext()
 {
     auto ctx = new mbedtls_pk_context;
@@ -76,13 +86,13 @@ CertStore::CertStore(const std::filesystem::path& backingDir) :
     BackingDir(backingDir),
     PrivateKey(NewMbedTlsPkContext(), FreeMbedTlsPkContext),
     Certificate(NewMbedTlsCertContext(), FreeMbedTlsCertContext),
-    AllowedCertificates(std::filesystem::path(backingDir).append("allowed.txt")),
-    DeniedCertificates(std::filesystem::path(backingDir).append("denied.txt"))
+    AllowedCertificates(std::filesystem::path(backingDir).append(AllowedCertificatesFileName)),
+    DeniedCertificates(std::filesystem::path(backingDir).append(DeniedCertificatesFileName))
 {
     auto keyPath = backingDir;
-    keyPath.append("key.der");
+    keyPath.append(HostKeyFileName);
     auto certPath = backingDir;
-    certPath.append("crt.der");
+    certPath.append(HostCertificateFileName);
 
     bool loadSuccess = false;
     {
@@ -167,8 +177,6 @@ void CertStore::ClearKnownCertificates()
 
 std::tuple<std::vector<unsigned char>, std::vector<unsigned char>> CertStore::GenerateKeyAndCertificateDer()
 {
-    constexpr unsigned int RsaKeySize = 2048;
-
     std::unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)> key(NewMbedTlsPkContext(), FreeMbedTlsPkContext);
     if (mbedtls_pk_setup(key.get(), mbedtls_pk_info_from_type(MBEDTLS_PK_RSA)))
     {
