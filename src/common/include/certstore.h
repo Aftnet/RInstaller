@@ -19,8 +19,8 @@ class CertStore
 public:
 	CertStore(const std::filesystem::path&);
 
-	inline mbedtls_pk_context& GetPrivateKey() { PrivateKey.get(); }
-	inline mbedtls_x509_crt& GetCertificate() { Certificate.get(); }
+	inline mbedtls_pk_context* GetPrivateKey() { return PrivateKey.get(); }
+	inline mbedtls_x509_crt* GetCertificate() { return Certificate.get(); }
 
 	void AddAllowedCertificate(mbedtls_x509_crt&);
 	void AddDeniedCertificate(mbedtls_x509_crt&);
