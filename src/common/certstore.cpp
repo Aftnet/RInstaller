@@ -56,6 +56,11 @@ bool CertStore::ThumbprintStore::Contains(const std::string& thumbprint) const
 
 void CertStore::ThumbprintStore::Add(const std::string& thumbprint)
 {
+    if (Store.contains(thumbprint))
+    {
+        return;
+    }
+
     Store.insert(thumbprint);
     std::ofstream storeFile(BackingFile, std::ios::ate | std::ios::app);
     storeFile << thumbprint << std::endl;
@@ -130,27 +135,27 @@ CertStore::CertStore(const std::filesystem::path& backingDir) :
     }
 }
 
-void CertStore::AddAllowedCertificate(mbedtls_x509_crt& cert)
+void CertStore::AddAllowedCertificate(mbedtls_x509_crt* cert)
 {
-    auto hash = GetSha1Thumbprint(std::span(cert.raw.p, cert.raw.p + cert.raw.len));
+    auto hash = GetSha1Thumbprint(std::span(cert->raw.p, cert->raw.p + cert->raw.len));
     AllowedCertificates.Add(hash);
 }
 
-void CertStore::AddDeniedCertificate(mbedtls_x509_crt& cert)
+void CertStore::AddDeniedCertificate(mbedtls_x509_crt* cert)
 {
-    auto hash = GetSha1Thumbprint(std::span(cert.raw.p, cert.raw.p + cert.raw.len));
+    auto hash = GetSha1Thumbprint(std::span(cert->raw.p, cert->raw.p + cert->raw.len));
     DeniedCertificates.Add(hash);
 }
 
-bool CertStore::CertificateIsAllowed(mbedtls_x509_crt& cert)
+bool CertStore::CertificateIsAllowed(mbedtls_x509_crt* cert)
 {
-    auto hash = GetSha1Thumbprint(std::span(cert.raw.p, cert.raw.p + cert.raw.len));
+    auto hash = GetSha1Thumbprint(std::span(cert->raw.p, cert->raw.p + cert->raw.len));
     return AllowedCertificates.Contains(hash);
 }
 
-bool CertStore::CertificateIsDenied(mbedtls_x509_crt& cert)
+bool CertStore::CertificateIsDenied(mbedtls_x509_crt* cert)
 {
-    auto hash = GetSha1Thumbprint(std::span(cert.raw.p, cert.raw.p + cert.raw.len));
+    auto hash = GetSha1Thumbprint(std::span(cert->raw.p, cert->raw.p + cert->raw.len));
     return DeniedCertificates.Contains(hash);
 }
 

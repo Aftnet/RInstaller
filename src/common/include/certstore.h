@@ -22,10 +22,10 @@ public:
 	inline mbedtls_pk_context* GetPrivateKey() { return PrivateKey.get(); }
 	inline mbedtls_x509_crt* GetCertificate() { return Certificate.get(); }
 
-	void AddAllowedCertificate(mbedtls_x509_crt&);
-	void AddDeniedCertificate(mbedtls_x509_crt&);
-	bool CertificateIsAllowed(mbedtls_x509_crt&);
-	bool CertificateIsDenied(mbedtls_x509_crt&);
+	void AddAllowedCertificate(mbedtls_x509_crt*);
+	void AddDeniedCertificate(mbedtls_x509_crt*);
+	bool CertificateIsAllowed(mbedtls_x509_crt*);
+	bool CertificateIsDenied(mbedtls_x509_crt*);
 	void ClearKnownCertificates();
 
 private:
