@@ -19,32 +19,6 @@ namespace
     constexpr unsigned int RsaKeySize = 2048;
 }
 
-mbedtls_pk_context* CertStore::NewMbedTlsPkContext()
-{
-    auto ctx = new mbedtls_pk_context;
-    mbedtls_pk_init(ctx);
-    return ctx;
-}
-
-void CertStore::FreeMbedTlsPkContext(mbedtls_pk_context* ctx)
-{
-    mbedtls_pk_free(ctx);
-    delete ctx;
-}
-
-mbedtls_x509_crt* CertStore::NewMbedTlsCertContext()
-{
-    auto ctx = new mbedtls_x509_crt;
-    mbedtls_x509_crt_init(ctx);
-    return ctx;
-}
-
-void CertStore::FreeMbedTlsCertContext(mbedtls_x509_crt* ctx)
-{
-    mbedtls_x509_crt_free(ctx);
-    delete ctx;
-}
-
 CertStore::ThumbprintStore::ThumbprintStore(const std::filesystem::path& backingFile) :
     BackingFile(backingFile)
 {
@@ -143,6 +117,32 @@ CertStore::CertStore(const std::filesystem::path& backingDir) :
         }
         certFile.write((const char*)certBuffer.data(), certBuffer.size());
     }
+}
+
+mbedtls_pk_context* CertStore::NewMbedTlsPkContext()
+{
+    auto ctx = new mbedtls_pk_context;
+    mbedtls_pk_init(ctx);
+    return ctx;
+}
+
+void CertStore::FreeMbedTlsPkContext(mbedtls_pk_context* ctx)
+{
+    mbedtls_pk_free(ctx);
+    delete ctx;
+}
+
+mbedtls_x509_crt* CertStore::NewMbedTlsCertContext()
+{
+    auto ctx = new mbedtls_x509_crt;
+    mbedtls_x509_crt_init(ctx);
+    return ctx;
+}
+
+void CertStore::FreeMbedTlsCertContext(mbedtls_x509_crt* ctx)
+{
+    mbedtls_x509_crt_free(ctx);
+    delete ctx;
 }
 
 void CertStore::AddAllowedCertificate(mbedtls_x509_crt* cert)
