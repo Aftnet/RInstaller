@@ -178,24 +178,24 @@ void CertStore::ClearKnownCertificates()
 std::tuple<std::vector<unsigned char>, std::vector<unsigned char>> CertStore::GenerateKeyAndCertificateDer()
 {
     std::unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)> key(NewMbedTlsPkContext(), FreeMbedTlsPkContext);
-    if (mbedtls_pk_setup(key.get(), mbedtls_pk_info_from_type(MBEDTLS_PK_RSA)))
+    if (auto ret = mbedtls_pk_setup(key.get(), mbedtls_pk_info_from_type(MBEDTLS_PK_RSA)); ret != 0)
     {
-        throw std::runtime_error("Unable to generate key pair");
+        throw std::runtime_error(std::format("Unable to generate key pair. Err code: {}", ret));
     }
 
-    if (mbedtls_rsa_gen_key(mbedtls_pk_rsa(*key.get()), mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg(), RsaKeySize, 65537))
+    if (auto ret = mbedtls_rsa_gen_key(mbedtls_pk_rsa(*key.get()), mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg(), RsaKeySize, 65537); ret != 0)
     {
-        throw std::runtime_error("Unable to generate key pair");
+        throw std::runtime_error(std::format("Unable to generate key pair. Err code: {}", ret));
     }
 
     std::vector<unsigned char> keyBuffer(RsaKeySize);
-    auto dataLen = mbedtls_pk_write_key_der(key.get(), (unsigned char*)keyBuffer.data(), keyBuffer.size());
-    if (dataLen < 1)
+    if (auto ret = mbedtls_pk_write_key_der(key.get(), (unsigned char*)keyBuffer.data(), keyBuffer.size()); ret < 1)
     {
-        throw std::runtime_error("Unable to convert cert to DER");
+        throw std::runtime_error(std::format("Unable to convert cert to DER. Err code: {}", ret));
     }
+    else
     {
-        auto tmpBuffer = std::vector(keyBuffer.end() - dataLen, keyBuffer.end());
+        auto tmpBuffer = std::vector(keyBuffer.end() - ret, keyBuffer.end());
         keyBuffer.swap(tmpBuffer);
     }
 
@@ -210,41 +210,41 @@ std::tuple<std::vector<unsigned char>, std::vector<unsigned char>> CertStore::Ge
     mbedtls_mpi serial;
     mbedtls_mpi_init(&serial);
     mbedtls_mpi_lset(&serial, 1);
-    if (mbedtls_x509write_crt_set_serial(crt.get(), &serial))
+    if (auto ret = mbedtls_x509write_crt_set_serial(crt.get(), &serial); ret != 0)
     {
-        throw std::runtime_error("Unable to generate certificate");
+        throw std::runtime_error(std::format("Unable to generate certificate. Err code: {}", ret));
     }
     mbedtls_mpi_free(&serial);
 
-    if (mbedtls_x509write_crt_set_subject_name(crt.get(), subjName))
+    if (auto ret = mbedtls_x509write_crt_set_subject_name(crt.get(), subjName); ret != 0)
     {
-        throw std::runtime_error("Unable to generate certificate");
+        throw std::runtime_error(std::format("Unable to generate certificate. Err code: {}", ret));
     }
-    if (mbedtls_x509write_crt_set_issuer_name(crt.get(), subjName))
+    if (auto ret = mbedtls_x509write_crt_set_issuer_name(crt.get(), subjName); ret != 0)
     {
-        throw std::runtime_error("Unable to generate certificate");
+        throw std::runtime_error(std::format("Unable to generate certificate. Err code: {}", ret));
     }
-    if (mbedtls_x509write_crt_set_basic_constraints(crt.get(), 0, -1))
+    if (auto ret = mbedtls_x509write_crt_set_basic_constraints(crt.get(), 0, -1); ret != 0)
     {
-        throw std::runtime_error("Unable to generate certificate");
+        throw std::runtime_error(std::format("Unable to generate certificate. Err code: {}", ret));
     }
-    if (mbedtls_x509write_crt_set_key_usage(crt.get(), MBEDTLS_X509_KU_KEY_AGREEMENT))
+    if (auto ret = mbedtls_x509write_crt_set_key_usage(crt.get(), MBEDTLS_X509_KU_KEY_AGREEMENT); ret != 0)
     {
-        throw std::runtime_error("Unable to generate certificate");
+        throw std::runtime_error(std::format("Unable to generate certificate. Err code: {}", ret));
     }
-    if (mbedtls_x509write_crt_set_validity(crt.get(), "19000101000000", "22000101000000"))
+    if (auto ret = mbedtls_x509write_crt_set_validity(crt.get(), "19000101000000", "22000101000000"); ret != 0)
     {
-        throw std::runtime_error("Unable to generate certificate");
+        throw std::runtime_error(std::format("Unable to generate certificate. Err code: {}", ret));
     }
 
     std::vector<unsigned char> certBuffer(RsaKeySize);
-    dataLen = mbedtls_x509write_crt_der(crt.get(), certBuffer.data(), certBuffer.size(), mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg());
-    if (dataLen < 1)
+    if (auto ret = mbedtls_x509write_crt_der(crt.get(), certBuffer.data(), certBuffer.size(), mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg()); ret < 1)
     {
-        throw std::runtime_error("Unable to convert cert to DER");
+        throw std::runtime_error(std::format("Unable to convert cert to DER. Err code: {}", ret));
     }
+    else
     {
-        auto tmpBuffer = std::vector(certBuffer.end() - dataLen, certBuffer.end());
+        auto tmpBuffer = std::vector(certBuffer.end() - ret, certBuffer.end());
         certBuffer.swap(tmpBuffer);
     }
 
@@ -253,17 +253,17 @@ std::tuple<std::vector<unsigned char>, std::vector<unsigned char>> CertStore::Ge
 
 void CertStore::LoadPrivateKey(const std::vector<unsigned char>& buffer)
 {
-    if (mbedtls_pk_parse_key(PrivateKey.get(), buffer.data(), buffer.size(), nullptr, 0, mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg()))
+    if (auto ret = mbedtls_pk_parse_key(PrivateKey.get(), buffer.data(), buffer.size(), nullptr, 0, mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg()); ret != 0)
     {
-        throw std::runtime_error("Unable to import key from der");
+        throw std::runtime_error(std::format("Unable to import key from der. Err code: {}", ret));
     }
 }
 
 void CertStore::LoadCertificate(const std::vector<unsigned char>& buffer)
 {
-    if (mbedtls_x509_crt_parse_der(Certificate.get(), buffer.data(), buffer.size()))
+    if (auto ret = mbedtls_x509_crt_parse_der(Certificate.get(), buffer.data(), buffer.size()); ret != 0)
     {
-        throw std::runtime_error("Unable to import cert from der");
+        throw std::runtime_error(std::format("Unable to import cert from der. Err code: {}", ret));
     }
 }
 
@@ -272,21 +272,21 @@ std::string CertStore::GetSha1Thumbprint(const std::span<unsigned char>& input)
     std::unique_ptr<mbedtls_sha1_context, void(*)(mbedtls_sha1_context*)> sha1(new mbedtls_sha1_context, [](mbedtls_sha1_context* d) { mbedtls_sha1_free(d); });
 
     mbedtls_sha1_init(sha1.get());
-    if (mbedtls_sha1_starts(sha1.get()))
+    if (auto ret = mbedtls_sha1_starts(sha1.get()); ret != 0)
     {
-        throw std::runtime_error("Unable to initialize sha1");
+        throw std::runtime_error(std::format("Unable to initialize sha1. Err code: {}", ret));
     }
 
-    if (mbedtls_sha1_update(sha1.get(), input.data(), input.size()))
+    if (auto ret = mbedtls_sha1_update(sha1.get(), input.data(), input.size()); ret != 0)
     {
-        throw std::runtime_error("Unable to update sha1");
+        throw std::runtime_error(std::format("Unable to update sha1. Err code: {}", ret));
     }
 
     constexpr int shaBufLen = 20;
     std::vector<unsigned char> shaBuf(shaBufLen);
-    if (mbedtls_sha1_finish(sha1.get(), shaBuf.data()))
+    if (auto ret = mbedtls_sha1_finish(sha1.get(), shaBuf.data()); ret != 0)
     {
-        throw std::runtime_error("Unable to finalize sha1");
+        throw std::runtime_error(std::format("Unable to finalize sha1. Err code: {}", ret));
     }
 
     std::string outStr;
