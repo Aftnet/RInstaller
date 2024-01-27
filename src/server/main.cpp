@@ -43,14 +43,16 @@ int main()
         {
             throw runtime_error(std::format("Failed accepting client connection. Err code: {}", ret));
         }
-        else
-        {
-            break;
-        }
+
+        break;
     }
-    //cout << "Waiting for client connection";
-    //unique_ptr<mbedtls_net_context, void(*)(mbedtls_net_context*)> clientSocket(new mbedtls_net_context, [](auto d) { mbedtls_net_free(d); delete d; });
-    //mbedtls_net_accept()
+
+    cout << "Client connected" << endl;
+
+    if (auto ret = mbedtls_net_set_nonblock(listenSocket.get()); ret != 0)
+    {
+        throw runtime_error(std::format("Failed setting socket to non blocking. Err code: {}", ret));
+    }
 
     return 0;
 }

@@ -1,35 +1,52 @@
-#include <iostream>
-
-#include "protocol.h"
 #include "certstore.h"
-#include "mbedtlsmgr.h"
-
 #include "mbedtls/net_sockets.h"
-#include "mbedtls/ssl.h"
-#include "mbedtls/entropy.h"
-#include "mbedtls/ctr_drbg.h"
-#include "mbedtls/debug.h"
+#include "mbedtlsmgr.h"
+#include "protocol.h"
+#include <chrono>
+#include <iostream>
+#include <memory>
+#include <stdexcept>
+#include <thread>
+#include <vector>
+
+using namespace std;
 
 int main()
 {
     auto& mbedtlsmgr = MbedtlsMgr::GetInstance();
-    CertStore store(std::filesystem::current_path());
+    CertStore store(filesystem::current_path());
 
-    mbedtls_net_context server_fd;
-    mbedtls_ssl_context ssl;
-    mbedtls_ssl_config conf;
+    cout << "Connecting to server" << endl;
 
-    mbedtls_net_init(&server_fd);
-    mbedtls_ssl_init(&ssl);
-    mbedtls_ssl_config_init(&conf);
-    //mbedtls_x509_crt_init(&cacert);
-    //mbedtls_ctr_drbg_init(&ctr_drbg);
+    unique_ptr<mbedtls_net_context, void(*)(mbedtls_net_context*)> socket(new mbedtls_net_context, [](auto d) { mbedtls_net_free(d); delete d; });
+    for (;;)
+    {
+        if (auto ret = mbedtls_net_connect(socket.get(), "localhost", PortNumber.c_str(), MBEDTLS_NET_PROTO_TCP); ret == MBEDTLS_ERR_NET_CONNECT_FAILED)
+        {
+            continue;
+        }
+        else if (ret == MBEDTLS_ERR_NET_UNKNOWN_HOST)
+        {
+            cout << "Unable to resolve host";
+            break;
+        }
+        else if (ret == MBEDTLS_ERR_NET_SOCKET_FAILED)
+        {
+            throw std::runtime_error("Unable to connect: socket error");
+        }
+        else if (ret != 0)
+        {
+            throw runtime_error(std::format("Failed connecting. Err code: {}", ret));
+        }
 
-    //if (auto ret = mbedtls_net_connect(&server_fd, "localhost", PortNumber.c_str(), MBEDTLS_NET_PROTO_TCP)) != 0)
-    //{
-    //    cout << "Unable to connect: " << ret;
-    //}
+        break;
+    }
 
+    cout << "Connected to server" << endl;
+    if (auto ret = mbedtls_net_set_nonblock(socket.get()); ret != 0)
+    {
+        throw runtime_error(std::format("Failed setting socket to non blocking. Err code: {}", ret));
+    }
 
     return 0;
 }
