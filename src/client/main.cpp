@@ -1,5 +1,6 @@
 #include "certstore.h"
 #include "mbedtls/net_sockets.h"
+#include "mbedtls/ssl.h"
 #include "mbedtlsmgr.h"
 #include "protocol.h"
 #include <chrono>
@@ -46,6 +47,13 @@ int main()
     if (auto ret = mbedtls_net_set_nonblock(socket.get()); ret != 0)
     {
         throw runtime_error(std::format("Failed setting socket to non blocking. Err code: {}", ret));
+    }
+
+    unique_ptr<mbedtls_ssl_config, void(*)(mbedtls_ssl_config*)> sslConfig(new mbedtls_ssl_config, [](auto d) { mbedtls_ssl_config_free(d); delete d; });
+    mbedtls_ssl_config_init(sslConfig.get());
+    if (auto ret = mbedtls_ssl_config_defaults(sslConfig.get(), MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT); ret != 0)
+    {
+        throw runtime_error(std::format("Failed setting ssl defaults. Err code: {}", ret));
     }
 
     return 0;
