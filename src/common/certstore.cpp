@@ -17,7 +17,7 @@ namespace
     constexpr unsigned int RsaKeySize = 2048;
 }
 
-std::string CertStore::HostName("RInstaller");
+std::string CertStore::HostName("RInstaller Instance");
 
 CertStore::ThumbprintStore::ThumbprintStore(const std::filesystem::path& backingFile) :
     BackingFile(backingFile)

@@ -1,4 +1,6 @@
 #include "certstore.h"
+#include "mbedtls/ctr_drbg.h"
+#include "mbedtls/entropy.h"
 #include "mbedtls/net_sockets.h"
 #include "mbedtls/ssl.h"
 #include "mbedtlsmgr.h"
@@ -60,10 +62,11 @@ int main()
     {
         throw runtime_error(std::format("Failed setting ssl defaults. Err code: {}", ret));
     }
+    mbedtls_ssl_conf_rng(sslConfig.get(), mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg());
     mbedtls_ssl_conf_dbg(sslConfig.get(), &MbedtlsMgr::DebugPrint, nullptr);
     mbedtls_ssl_conf_authmode(sslConfig.get(), MBEDTLS_SSL_VERIFY_REQUIRED);
 
-    mbedtls_ssl_set_bio(sslCtx.get(), socket.get(), mbedtls_net_send, nullptr, mbedtls_net_recv_timeout);
+    mbedtls_ssl_set_bio(sslCtx.get(), socket.get(), mbedtls_net_send, mbedtls_net_recv, nullptr);
     mbedtls_ssl_set_verify(sslCtx.get(), &CertStore::MbedTlsIOStreamInteractiveCertVerification, &certStore);
     if (auto ret = mbedtls_ssl_set_hostname(sslCtx.get(), CertStore::HostName.c_str()); ret != 0)
     {
@@ -79,9 +82,8 @@ int main()
     }
 
     std::vector<unsigned char> lol(128);
-    if (auto ret = mbedtls_ssl_write(sslCtx.get(), lol.data(), lol.size()); ret != 0)
+    while(mbedtls_ssl_write(sslCtx.get(), lol.data(), lol.size()) < 0)
     {
-        throw runtime_error(std::format("Failed sending. Err code: {}", ret));
     }
 
     return 0;
