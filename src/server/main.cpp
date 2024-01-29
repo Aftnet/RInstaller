@@ -68,10 +68,15 @@ int main()
     {
         throw runtime_error(std::format("Failed setting ssl defaults. Err code: {}", ret));
     }
+    mbedtls_ssl_conf_dbg(sslConfig.get(), &MbedtlsMgr::DebugPrint, nullptr);
     mbedtls_ssl_conf_authmode(sslConfig.get(), MBEDTLS_SSL_VERIFY_REQUIRED);
 
     mbedtls_ssl_set_bio(sslCtx.get(), listenSocket.get(), mbedtls_net_send, nullptr, mbedtls_net_recv_timeout);
     mbedtls_ssl_set_verify(sslCtx.get(), &CertStore::MbedTlsIOStreamInteractiveCertVerification, &certStore);
+    if (auto ret = mbedtls_ssl_set_hostname(sslCtx.get(), CertStore::HostName.c_str()); ret != 0)
+    {
+        throw runtime_error(std::format("Failed setting hostname. Err code: {}", ret));
+    }
     if (auto ret = mbedtls_ssl_setup(sslCtx.get(), sslConfig.get()); ret != 0)
     {
         throw runtime_error(std::format("Failed setting up ssl context. Err code: {}", ret));

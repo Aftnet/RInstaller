@@ -17,6 +17,8 @@ struct mbedtls_x509_crt;
 class CertStore
 {
 public:
+	static std::string HostName;
+
 	CertStore(const std::filesystem::path&);
 
 	inline mbedtls_pk_context* GetPrivateKey() { return PrivateKey.get(); }

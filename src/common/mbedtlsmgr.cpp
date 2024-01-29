@@ -2,6 +2,7 @@
 #include "mbedtls/entropy.h"
 #include "mbedtlsmgr.h"
 #include <format>
+#include <iostream>
 #include <stdexcept>
 
 MbedtlsMgr::MbedtlsMgr():
@@ -14,4 +15,9 @@ MbedtlsMgr::MbedtlsMgr():
 	{
 		throw std::runtime_error("Failed initializing drdbg");
 	}
+}
+
+void MbedtlsMgr::DebugPrint(void* ctx, int level, const char* file, int line, const char* str)
+{
+	std::cout << file << line << str << std::endl;
 }

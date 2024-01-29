@@ -17,6 +17,8 @@ namespace
     constexpr unsigned int RsaKeySize = 2048;
 }
 
+std::string CertStore::HostName("RInstaller");
+
 CertStore::ThumbprintStore::ThumbprintStore(const std::filesystem::path& backingFile) :
     BackingFile(backingFile)
 {
@@ -200,7 +202,7 @@ std::tuple<std::vector<unsigned char>, std::vector<unsigned char>> CertStore::Ge
     std::unique_ptr<mbedtls_x509write_cert, void(*)(mbedtls_x509write_cert*)> crt(new mbedtls_x509write_cert, [](mbedtls_x509write_cert* d) { mbedtls_x509write_crt_free(d); delete d; });
     mbedtls_x509write_crt_init(crt.get());
 
-    auto subjName = "CN=RInstaller";
+    const std::string subjName(std::string("CN=").append(CertStore::HostName));
     mbedtls_x509write_crt_set_md_alg(crt.get(), MBEDTLS_MD_SHA256);
     mbedtls_x509write_crt_set_subject_key(crt.get(), key.get());
     mbedtls_x509write_crt_set_issuer_key(crt.get(), key.get());
@@ -214,11 +216,11 @@ std::tuple<std::vector<unsigned char>, std::vector<unsigned char>> CertStore::Ge
     }
     mbedtls_mpi_free(&serial);
 
-    if (auto ret = mbedtls_x509write_crt_set_subject_name(crt.get(), subjName); ret != 0)
+    if (auto ret = mbedtls_x509write_crt_set_subject_name(crt.get(), subjName.c_str()); ret != 0)
     {
         throw std::runtime_error(std::format("Unable to generate certificate. Err code: {}", ret));
     }
-    if (auto ret = mbedtls_x509write_crt_set_issuer_name(crt.get(), subjName); ret != 0)
+    if (auto ret = mbedtls_x509write_crt_set_issuer_name(crt.get(), subjName.c_str()); ret != 0)
     {
         throw std::runtime_error(std::format("Unable to generate certificate. Err code: {}", ret));
     }

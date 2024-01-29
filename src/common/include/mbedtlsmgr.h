@@ -26,4 +26,6 @@ public:
 
     MbedtlsMgr(const MbedtlsMgr&) = delete;
     void operator=(const MbedtlsMgr&) = delete;
+
+    static void DebugPrint(void* ctx, int level, const char* file, int line, const char* str);
 };
