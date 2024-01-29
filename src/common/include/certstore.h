@@ -28,6 +28,7 @@ public:
 	bool CertificateIsDenied(mbedtls_x509_crt*);
 	void ClearKnownCertificates();
 
+	static int MbedTlsIOStreamInteractiveCertVerification(void*, mbedtls_x509_crt*, int, uint32_t*);
 private:
 	class ThumbprintStore
 	{

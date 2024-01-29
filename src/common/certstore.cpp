@@ -295,3 +295,9 @@ std::string CertStore::GetSha1Thumbprint(const std::span<unsigned char>& input)
 
     return outStr;
 }
+
+int CertStore::MbedTlsIOStreamInteractiveCertVerification(void* pCertStore, mbedtls_x509_crt* pCertChain, int, uint32_t* chainLength)
+{
+    auto certStore = reinterpret_cast<CertStore*>(pCertStore);
+    return -1;
+}

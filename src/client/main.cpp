@@ -50,6 +50,7 @@ int main()
     }
 
     cout << "Connected to server" << endl;
+
     if (auto ret = mbedtls_net_set_nonblock(socket.get()); ret != 0)
     {
         throw runtime_error(std::format("Failed setting socket to non blocking. Err code: {}", ret));
@@ -61,6 +62,8 @@ int main()
     }
     mbedtls_ssl_conf_authmode(sslConfig.get(), MBEDTLS_SSL_VERIFY_REQUIRED);
 
+    mbedtls_ssl_set_bio(sslCtx.get(), socket.get(), mbedtls_net_send, nullptr, mbedtls_net_recv_timeout);
+    mbedtls_ssl_set_verify(sslCtx.get(), &CertStore::MbedTlsIOStreamInteractiveCertVerification, &certStore);
     if (auto ret = mbedtls_ssl_setup(sslCtx.get(), sslConfig.get()); ret != 0)
     {
         throw runtime_error(std::format("Failed setting up ssl context. Err code: {}", ret));
@@ -68,6 +71,12 @@ int main()
     if (auto ret = mbedtls_ssl_set_hs_own_cert(sslCtx.get(), certStore.GetCertificate(), certStore.GetPrivateKey()); ret != 0)
     {
         throw runtime_error(std::format("Failed setting ssl certificate. Err code: {}", ret));
+    }
+
+    std::vector<unsigned char> lol(128);
+    if (auto ret = mbedtls_ssl_write(sslCtx.get(), lol.data(), lol.size()); ret != 0)
+    {
+        throw runtime_error(std::format("Failed sending. Err code: {}", ret));
     }
 
     return 0;
