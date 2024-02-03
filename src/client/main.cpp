@@ -67,6 +67,10 @@ int main()
     mbedtls_ssl_conf_dbg(sslConfig.get(), &MbedtlsMgr::DebugPrint, nullptr);
     mbedtls_debug_set_threshold(1);
     mbedtls_ssl_conf_authmode(sslConfig.get(), MBEDTLS_SSL_VERIFY_REQUIRED);
+    if (auto ret = mbedtls_ssl_conf_own_cert(sslConfig.get(), certStore.GetCertificate(), certStore.GetPrivateKey()); ret != 0)
+    {
+        throw runtime_error(std::format("Failed setting ssl certificate. Err code: {}", ret));
+    }
 
     mbedtls_ssl_set_bio(sslCtx.get(), socket.get(), mbedtls_net_send, mbedtls_net_recv, nullptr);
     mbedtls_ssl_set_verify(sslCtx.get(), &CertStore::MbedTlsIOStreamInteractiveCertVerification, &certStore);
@@ -77,10 +81,6 @@ int main()
     if (auto ret = mbedtls_ssl_setup(sslCtx.get(), sslConfig.get()); ret != 0)
     {
         throw runtime_error(std::format("Failed setting up ssl context. Err code: {}", ret));
-    }
-    if (auto ret = mbedtls_ssl_set_hs_own_cert(sslCtx.get(), certStore.GetCertificate(), certStore.GetPrivateKey()); ret != 0)
-    {
-        throw runtime_error(std::format("Failed setting ssl certificate. Err code: {}", ret));
     }
 
     std::vector<unsigned char> lol(128);
