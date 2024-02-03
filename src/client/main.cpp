@@ -1,5 +1,6 @@
 #include "certstore.h"
 #include "mbedtls/ctr_drbg.h"
+#include "mbedtls/debug.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/net_sockets.h"
 #include "mbedtls/ssl.h"
@@ -64,6 +65,7 @@ int main()
     }
     mbedtls_ssl_conf_rng(sslConfig.get(), mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg());
     mbedtls_ssl_conf_dbg(sslConfig.get(), &MbedtlsMgr::DebugPrint, nullptr);
+    mbedtls_debug_set_threshold(1);
     mbedtls_ssl_conf_authmode(sslConfig.get(), MBEDTLS_SSL_VERIFY_REQUIRED);
 
     mbedtls_ssl_set_bio(sslCtx.get(), socket.get(), mbedtls_net_send, mbedtls_net_recv, nullptr);
@@ -82,8 +84,23 @@ int main()
     }
 
     std::vector<unsigned char> lol(128);
-    while(mbedtls_ssl_write(sslCtx.get(), lol.data(), lol.size()) < 0)
+    for(size_t written = 0; written< lol.size();)
     {
+        auto ret = mbedtls_ssl_write(sslCtx.get(), lol.data(), lol.size());
+        if (ret > 0)
+        {
+            written += ret;
+        }
+        else if (ret == MBEDTLS_ERR_SSL_WANT_READ || ret != MBEDTLS_ERR_SSL_WANT_WRITE || ret != MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS)
+        {
+            this_thread::sleep_for(1s);
+            continue;
+        }
+        else
+        {
+            throw runtime_error(std::format("Failed writing. Err code: {:x}", ret));
+            break;
+        }
     }
 
     return 0;

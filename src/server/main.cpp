@@ -1,5 +1,6 @@
 #include "certstore.h"
 #include "mbedtls/ctr_drbg.h"
+#include "mbedtls/debug.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/net_sockets.h"
 #include "mbedtls/ssl.h"
@@ -61,7 +62,7 @@ int main()
 
     cout << "Client connected" << endl;
 
-    if (auto ret = mbedtls_net_set_nonblock(listenSocket.get()); ret != 0)
+    if (auto ret = mbedtls_net_set_nonblock(clientSocket.get()); ret != 0)
     {
         throw runtime_error(std::format("Failed setting socket to non blocking. Err code: {}", ret));
     }
@@ -72,9 +73,10 @@ int main()
     }
     mbedtls_ssl_conf_rng(sslConfig.get(), mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg());
     mbedtls_ssl_conf_dbg(sslConfig.get(), &MbedtlsMgr::DebugPrint, nullptr);
+    mbedtls_debug_set_threshold(1);
     mbedtls_ssl_conf_authmode(sslConfig.get(), MBEDTLS_SSL_VERIFY_REQUIRED);
 
-    mbedtls_ssl_set_bio(sslCtx.get(), listenSocket.get(), mbedtls_net_send, mbedtls_net_recv, nullptr);
+    mbedtls_ssl_set_bio(sslCtx.get(), clientSocket.get(), mbedtls_net_send, mbedtls_net_recv, nullptr);
     mbedtls_ssl_set_verify(sslCtx.get(), &CertStore::MbedTlsIOStreamInteractiveCertVerification, &certStore);
     if (auto ret = mbedtls_ssl_set_hostname(sslCtx.get(), CertStore::HostName.c_str()); ret != 0)
     {
@@ -90,8 +92,24 @@ int main()
     }
 
     std::vector<unsigned char> lol(128);
-    auto readBytes = mbedtls_ssl_read(sslCtx.get(), lol.data(), lol.size());
-    std::cout << "Read something";
+    for (size_t written = 0; written < lol.size();)
+    {
+        auto ret = mbedtls_ssl_read(sslCtx.get(), lol.data(), lol.size());
+        if (ret > 0)
+        {
+            written += ret;
+        }
+        else if (ret == MBEDTLS_ERR_SSL_WANT_READ || ret != MBEDTLS_ERR_SSL_WANT_WRITE || ret != MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS)
+        {
+            this_thread::sleep_for(1s);
+            continue;
+        }
+        else
+        {
+            throw runtime_error(std::format("Failed writing. Err code: {:x}", ret));
+            break;
+        }
+    }
 
     return 0;
 }
