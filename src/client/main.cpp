@@ -59,7 +59,6 @@ int main()
     mbedtls_ssl_init(sslCtx.get());
     auto sslConfig = certStore.GenerateConfig(false);
     mbedtls_ssl_set_bio(sslCtx.get(), socket.get(), mbedtls_net_send, mbedtls_net_recv, nullptr);
-    mbedtls_ssl_set_verify(sslCtx.get(), &CertStore::MbedTlsIOStreamInteractiveCertVerification, &certStore);
     if (auto ret = mbedtls_ssl_set_hostname(sslCtx.get(), CertStore::HostName.c_str()); ret != 0)
     {
         throw runtime_error(std::format("Failed setting hostname. Err code: {}", ret));
@@ -67,6 +66,14 @@ int main()
     if (auto ret = mbedtls_ssl_setup(sslCtx.get(), sslConfig.get()); ret != 0)
     {
         throw runtime_error(std::format("Failed setting up ssl context. Err code: {}", ret));
+    }
+
+    for (int ret; (ret = mbedtls_ssl_handshake(sslCtx.get())) != 0;)
+    {
+        if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE)
+        {
+            throw runtime_error(std::format("ssl handshake failed. Err code: {}", ret));
+        }
     }
 
     std::vector<unsigned char> lol(128);

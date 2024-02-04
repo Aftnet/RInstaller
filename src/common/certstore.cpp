@@ -1,7 +1,6 @@
 #include "certstore.h"
 #include "mbedtls/asn1.h"
 #include "mbedtls/ctr_drbg.h"
-#include "mbedtls/debug.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/oid.h"
 #include "mbedtls/ssl.h"
@@ -198,8 +197,8 @@ unique_ptr<mbedtls_ssl_config, void(*)(mbedtls_ssl_config*)>CertStore::GenerateC
     mbedtls_ssl_conf_rng(sslConfig.get(), mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg());
     mbedtls_ssl_conf_dbg(sslConfig.get(), &MbedtlsMgr::DebugPrint, nullptr);
     mbedtls_ssl_conf_preference_order(sslConfig.get(), configForServer ? MBEDTLS_SSL_SRV_CIPHERSUITE_ORDER_SERVER : MBEDTLS_SSL_SRV_CIPHERSUITE_ORDER_CLIENT);
-    mbedtls_debug_set_threshold(4);
-    mbedtls_ssl_conf_authmode(sslConfig.get(), MBEDTLS_SSL_VERIFY_REQUIRED);
+    mbedtls_ssl_conf_authmode(sslConfig.get(), MBEDTLS_SSL_VERIFY_OPTIONAL);
+    mbedtls_ssl_conf_verify(sslConfig.get(), &MbedTlsIOStreamInteractiveCertVerification, (void*)this);
     if (auto ret = mbedtls_ssl_conf_own_cert(sslConfig.get(), GetCertificate(), GetPrivateKey()); ret != 0)
     {
         throw runtime_error(format("Failed setting ssl certificate. Err code: {}", ret));
