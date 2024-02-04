@@ -18,7 +18,7 @@ struct mbedtls_x509_crt;
 class CertStore
 {
 public:
-	static std::string HostName;
+	static const std::string HostName;
 
 	CertStore(const std::filesystem::path&);
 
@@ -47,6 +47,9 @@ private:
 		const std::filesystem::path BackingFile;
 		std::unordered_set<std::string> Store;
 	};
+
+	static const std::string CaKey;
+	static const std::string CaCert;
 
 	const std::filesystem::path BackingDir;
 	std::unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)> PrivateKey;

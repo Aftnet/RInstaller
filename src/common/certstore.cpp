@@ -21,10 +21,62 @@ namespace
     const string HostCertificateFileName("host_cert.der");
 
     constexpr unsigned int RsaKeySize = 2048;
-    constexpr bool ForceCertRegeneration = false;
+    constexpr bool ForceCertRegeneration = true;
 }
 
-string CertStore::HostName("RInstaller Instance");
+const string CertStore::HostName("RInstaller Instance");
+
+const string CertStore::CaKey("-----BEGIN PRIVATE KEY-----\n\
+MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCzms3awwiSmROT\n\
++76hxFHDjUmxQRnJ5gd9dai3ay0GzUItwpio3nFZBorDjsLYaAsAWQgKx9444LIK\n\
+qDk/9umiPKWiOuT03kZIexcJlWj79adsmNYMjJC5VIPpHnFq+8NMD+obGZmCv1T7\n\
+akKsK1YgDeDdwNhteWKsLbmipmcy5tan3sJ5hxxw8QsQgsZgGRgUVu5+nk57pRDX\n\
+Qp+rliRiI6hTe8+u4aQZAGyb+SK1+39IB7Wo73sUGdV8iulKK+mMwdJKLCjyI9DO\n\
+p/nz4st/9BiiC5mPtIlGNr4Km3Tyyu0EwxfU48QICED0ZIlIk81h9tBiGazy2aE2\n\
+MOY1TskrAgMBAAECggEAGnC/vWTY7jv61d5JwibUoqU6JA4hbcefcqjPnbD5f/bX\n\
+t0TelH2q0iBUbVWm+ZTXicWRmYSzAkyR6V+6jeAbpPaoq6lf62yNjD4StiZ4vh77\n\
+9tDJMi+/XolCoh8JM2a86YWuQS8TmlvwdtK93frDQxTH9d1d/z/PdumEWp2Es8lo\n\
+xGutvNaubg+apUdEe/rzE9sQ3TI2Sxeu7/dHer7yna7xupYECvNzqO8eNbwJbaDB\n\
+onqah7bxTlONSUdQhx47yGkK9OLOj3CTytLvqWkCMaA8T2ASHIHDhrzN2YAQovKX\n\
+Zw7eYiBgk947s16GgIpt2geOGPlhn39jd9jQi+ojAQKBgQDPKd8jvlzH6p7a1F3x\n\
+ZylNB5jQe11CYrVZeI1twlD2JVGvHCDdUVnVJLy2Xs7lJA3+NzF43Q6T5KcUoUfI\n\
+dKtAaAYGCOh4olkIrgbCZP2UOBndflj05em/QyY3gz0EfXQ2jNPzp30SFnEncLKM\n\
+iSqh7xa9SHSJw832btbPtq59EwKBgQDd8cfykJf88Vu4zvw9v6Nmdu2Kegt2Tg7d\n\
+zOyc17GCYvzeN5MF3mSbriQbJtEbxk0LzkiE6EitTrxQ3GntFMrhAcr9+0YlAGzf\n\
+LMNTrM7U7cjhJX3114pB7q18LCW0uuDW5v+N3MVL8MXPmey8qpVdbTZ3R0wgZqJN\n\
+L+Nq2nf+iQKBgAQbLVwVAtvHj7yApxgI1m27b9D6EQAm2rdaR1tclaQ7WyIgaZpZ\n\
+aXFrF/55ZJpwG4LlbyqZHxfZWWJ0S+ryPQ66wRvPg2QYu7ELWgDyZYBRmFmmjnbU\n\
+M8zhtNk21bfIEMyf//d9Y2I/ZaDFgBR/B4RMK+Q2knDEm8l9qu5VDaJXAoGAGRdJ\n\
+ZHnGRPlARk9YIt70aRQO3LXZb+F5Osf9A+o6jiQEtFaSD3rJ4vO37z3fLAWqFiiW\n\
++DeOZ9Fb5sRUUVIlcXSTb00l6+71X/Gej2oc4+OR7yoe6Fkar0N9Z2lSRfFOk9z/\n\
+jRklUOWCZ2reYaHjSvGa07dCuvL/bDx6uEzEfgkCgYAsNGlD4pegebSmdEsOduKK\n\
+/C5ZpQYyzUxDr8yOktiwNk9b7LmuqO3MPXBxd4yeuplFXS/7qLZMHSl5lqfQJN6K\n\
+necC1NhrKysGZiYJdI59/RZ5Nlzy1hufipFlwwKXOTE6vjtbARGR9LsfFi1o0PFm\n\
+HGqo2n13BWKoeOrRg5AmlQ==\n\
+-----END PRIVATE KEY-----");
+
+const std::string CertStore::CaCert("-----BEGIN CERTIFICATE-----\n\
+MIIDnTCCAoWgAwIBAgIUOfPCYQQmB4rDP3iLfXqc1dSLAJ8wDQYJKoZIhvcNAQEL\n\
+BQAwXTELMAkGA1UEBhMCVVMxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoM\n\
+GEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDEWMBQGA1UEAwwNUkluc3RhbGxlciBD\n\
+QTAgFw0yNDAyMDQwNzEwMTNaGA8yMTI0MDExMTA3MTAxM1owXTELMAkGA1UEBhMC\n\
+VVMxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGEludGVybmV0IFdpZGdp\n\
+dHMgUHR5IEx0ZDEWMBQGA1UEAwwNUkluc3RhbGxlciBDQTCCASIwDQYJKoZIhvcN\n\
+AQEBBQADggEPADCCAQoCggEBALOazdrDCJKZE5P7vqHEUcONSbFBGcnmB311qLdr\n\
+LQbNQi3CmKjecVkGisOOwthoCwBZCArH3jjgsgqoOT/26aI8paI65PTeRkh7FwmV\n\
+aPv1p2yY1gyMkLlUg+kecWr7w0wP6hsZmYK/VPtqQqwrViAN4N3A2G15YqwtuaKm\n\
+ZzLm1qfewnmHHHDxCxCCxmAZGBRW7n6eTnulENdCn6uWJGIjqFN7z67hpBkAbJv5\n\
+IrX7f0gHtajvexQZ1XyK6Uor6YzB0kosKPIj0M6n+fPiy3/0GKILmY+0iUY2vgqb\n\
+dPLK7QTDF9TjxAgIQPRkiUiTzWH20GIZrPLZoTYw5jVOySsCAwEAAaNTMFEwHQYD\n\
+VR0OBBYEFPxVU6ZQWXlYhYH1OD2Amq5W3k5UMB8GA1UdIwQYMBaAFPxVU6ZQWXlY\n\
+hYH1OD2Amq5W3k5UMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEB\n\
+AInSH8k/GAw/FhigMoYJZMQLcqQYG7jDLlbsDJrTM9Y71JxfsMEwfY6rVQRM0Xwp\n\
+cXpqYKEPcZhHd12yj73NqZd7yt++6OqlIp5y52sJeYpuEkX2Se+il9E2WRwSHxYc\n\
+su1cnKf8uj6Vqdmr8Ek272QwuE9Qcf0/qXfFuw/LfV3c2tgzTHAY81JWNsBUHHMC\n\
+ih2l9ZhaHCHOJRkQzstg5sTRLHvuzT7NxvfNbQcqX2ERyLO7e02LzM2tPn+8sywv\n\
+xjxLrdGTYt58hx/a9qw0/RVTuCG74DEhyiBfvASFRsQjN9EWWOs3rF9kRrJoNDkc\n\
+uR38HomSTm2EWe+M1sP4rAA=\n\
+-----END CERTIFICATE-----");
 
 CertStore::ThumbprintStore::ThumbprintStore(const filesystem::path& backingFile) :
     BackingFile(backingFile)
@@ -197,7 +249,7 @@ unique_ptr<mbedtls_ssl_config, void(*)(mbedtls_ssl_config*)>CertStore::GenerateC
     mbedtls_ssl_conf_rng(sslConfig.get(), mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg());
     mbedtls_ssl_conf_dbg(sslConfig.get(), &MbedtlsMgr::DebugPrint, nullptr);
     mbedtls_ssl_conf_preference_order(sslConfig.get(), configForServer ? MBEDTLS_SSL_SRV_CIPHERSUITE_ORDER_SERVER : MBEDTLS_SSL_SRV_CIPHERSUITE_ORDER_CLIENT);
-    mbedtls_ssl_conf_authmode(sslConfig.get(), MBEDTLS_SSL_VERIFY_OPTIONAL);
+    mbedtls_ssl_conf_authmode(sslConfig.get(), MBEDTLS_SSL_VERIFY_REQUIRED);
     mbedtls_ssl_conf_verify(sslConfig.get(), &MbedTlsIOStreamInteractiveCertVerification, (void*)this);
     if (auto ret = mbedtls_ssl_conf_own_cert(sslConfig.get(), GetCertificate(), GetPrivateKey()); ret != 0)
     {
@@ -209,6 +261,18 @@ unique_ptr<mbedtls_ssl_config, void(*)(mbedtls_ssl_config*)>CertStore::GenerateC
 
 tuple<vector<unsigned char>, vector<unsigned char>> CertStore::GenerateKeyAndCertificateDer()
 {
+    unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)> caKey(NewMbedTlsPkContext(), FreeMbedTlsPkContext);
+    if (auto ret = mbedtls_pk_parse_key(caKey.get(), (const unsigned char*)CaKey.data(), CaKey.length() + 1, nullptr, 0, mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg()); ret != 0)
+    {
+        throw runtime_error(format("Unable to load CA key. Err code: {}", ret));
+    }
+
+    unique_ptr<mbedtls_x509_crt, void(*)(mbedtls_x509_crt*)> caCert(NewMbedTlsCertContext(), FreeMbedTlsCertContext);
+    if (auto ret = mbedtls_x509_crt_parse(caCert.get(), (const unsigned char*)CaCert.data(), CaCert.length() + 1); ret != 0)
+    {
+        throw runtime_error(format("Unable to load CA certificate. Err code: {}", ret));
+    }
+
     unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)> key(NewMbedTlsPkContext(), FreeMbedTlsPkContext);
     if (auto ret = mbedtls_pk_setup(key.get(), mbedtls_pk_info_from_type(MBEDTLS_PK_RSA)); ret != 0)
     {
@@ -234,11 +298,10 @@ tuple<vector<unsigned char>, vector<unsigned char>> CertStore::GenerateKeyAndCer
     unique_ptr<mbedtls_x509write_cert, void(*)(mbedtls_x509write_cert*)> crt(new mbedtls_x509write_cert, [](mbedtls_x509write_cert* d) { mbedtls_x509write_crt_free(d); delete d; });
     mbedtls_x509write_crt_init(crt.get());
 
-    const string subjName(string("CN=").append(CertStore::HostName));
+    
     mbedtls_x509write_crt_set_md_alg(crt.get(), MBEDTLS_MD_SHA256);
     mbedtls_x509write_crt_set_subject_key(crt.get(), key.get());
-    mbedtls_x509write_crt_set_issuer_key(crt.get(), key.get());
-
+    mbedtls_x509write_crt_set_issuer_key(crt.get(), caKey.get());
     mbedtls_mpi serial;
     mbedtls_mpi_init(&serial);
     mbedtls_mpi_lset(&serial, 1);
@@ -248,11 +311,15 @@ tuple<vector<unsigned char>, vector<unsigned char>> CertStore::GenerateKeyAndCer
     }
     mbedtls_mpi_free(&serial);
 
+    const string subjName(string("CN=").append(CertStore::HostName));
     if (auto ret = mbedtls_x509write_crt_set_subject_name(crt.get(), subjName.c_str()); ret != 0)
     {
         throw runtime_error(format("Unable to generate certificate. Err code: {}", ret));
     }
-    if (auto ret = mbedtls_x509write_crt_set_issuer_name(crt.get(), subjName.c_str()); ret != 0)
+
+    vector<char> buffer(128);
+    mbedtls_x509_dn_gets(buffer.data(), buffer.size(), &caCert->subject);
+    if (auto ret = mbedtls_x509write_crt_set_issuer_name(crt.get(), buffer.data()); ret != 0)
     {
         throw runtime_error(format("Unable to generate certificate. Err code: {}", ret));
     }
