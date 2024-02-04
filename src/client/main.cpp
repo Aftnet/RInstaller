@@ -19,6 +19,7 @@ int main()
 {
     auto& mbedtlsMgr = MbedtlsMgr::GetInstance();
     CertStore certStore(filesystem::current_path());
+    cout << "Local cert thumbprint: " << certStore.GetCertificateTumbprint() << endl;
 
     unique_ptr<mbedtls_net_context, void(*)(mbedtls_net_context*)> socket(new mbedtls_net_context, [](auto d) { mbedtls_net_free(d); delete d; });
     mbedtls_net_init(socket.get());

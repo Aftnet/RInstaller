@@ -10,6 +10,7 @@
 #include <array>
 #include <format>
 #include <fstream>
+#include <iostream>
 
 using namespace std;
 
@@ -132,6 +133,7 @@ CertStore::CertStore(const filesystem::path& backingDir) :
     {
         throw runtime_error(format("Unable to load CA certificate. Err code: {}", ret));
     }
+    CaCertificateThumbprint = GetSha1Thumbprint(span(CaCertificate->raw.p, CaCertificate->raw.p + CaCertificate->raw.len));
 
     auto keyPath = backingDir;
     keyPath.append(HostKeyFileName);
@@ -214,30 +216,6 @@ void CertStore::FreeMbedTlsCertContext(mbedtls_x509_crt* ctx)
 {
     mbedtls_x509_crt_free(ctx);
     delete ctx;
-}
-
-void CertStore::AddAllowedCertificate(mbedtls_x509_crt* cert)
-{
-    auto hash = GetSha1Thumbprint(span(cert->raw.p, cert->raw.p + cert->raw.len));
-    AllowedCertificates.Add(hash);
-}
-
-void CertStore::AddDeniedCertificate(mbedtls_x509_crt* cert)
-{
-    auto hash = GetSha1Thumbprint(span(cert->raw.p, cert->raw.p + cert->raw.len));
-    DeniedCertificates.Add(hash);
-}
-
-bool CertStore::CertificateIsAllowed(mbedtls_x509_crt* cert)
-{
-    auto hash = GetSha1Thumbprint(span(cert->raw.p, cert->raw.p + cert->raw.len));
-    return AllowedCertificates.Contains(hash);
-}
-
-bool CertStore::CertificateIsDenied(mbedtls_x509_crt* cert)
-{
-    auto hash = GetSha1Thumbprint(span(cert->raw.p, cert->raw.p + cert->raw.len));
-    return DeniedCertificates.Contains(hash);
 }
 
 void CertStore::ClearKnownCertificates()
@@ -393,6 +371,13 @@ void CertStore::LoadCertificate(const vector<unsigned char>& buffer)
     {
         throw runtime_error(format("Unable to import cert from der. Err code: {}", ret));
     }
+
+    CertificateThumbprint = GetSha1Thumbprint(Certificate.get());
+}
+
+std::string CertStore::GetSha1Thumbprint(mbedtls_x509_crt* cert)
+{
+    return GetSha1Thumbprint(span(cert->raw.p, cert->raw.p + cert->raw.len));
 }
 
 string CertStore::GetSha1Thumbprint(const span<unsigned char>& input)
@@ -426,8 +411,51 @@ string CertStore::GetSha1Thumbprint(const span<unsigned char>& input)
     return outStr;
 }
 
-int CertStore::MbedTlsIOStreamInteractiveCertVerification(void* pCertStore, mbedtls_x509_crt* pCertChain, int, uint32_t* chainLength)
+int CertStore::MbedTlsIOStreamInteractiveCertVerification(void* pCertStore, mbedtls_x509_crt* cert, int chainDepth, uint32_t* flags)
 {
-    auto certStore = reinterpret_cast<CertStore*>(pCertStore);
-    return 0;
+    auto thumbprint = GetSha1Thumbprint(cert);
+    auto certStore = reinterpret_cast<CertStore*>(cert);
+
+    if (certStore->AllowedCertificates.Contains(thumbprint) || certStore->CaCertificateThumbprint.compare(thumbprint))
+    {
+        return 0;
+    }
+    else if (certStore->DeniedCertificates.Contains(thumbprint))
+    {
+        return -1;
+    }
+
+    while (true)
+    {
+        cout << "Unknown host with cert thumbprint: " << thumbprint << endl;
+        cout << "Trust and connect?" << endl;
+        cout << "y: yes and always trust" << endl;
+        cout << "o: yes but ask again next time" << endl;
+        cout << "n: no but ask again next time" << endl;
+        cout << "x: no and never trust" << endl;
+
+        string input;
+        cin >> input;
+
+        if(input.compare("y") == 0)
+        {
+            certStore->AllowedCertificates.Add(thumbprint);
+            return 0;
+        }
+        else if (input.compare("o") == 0)
+        {
+            return 0;
+        }
+        else if (input.compare("n") == 0)
+        {
+            return -1;
+        }
+        else if (input.compare("x") == 0)
+        {
+            certStore->DeniedCertificates.Add(thumbprint);
+            return 0;
+        }
+    }
+
+    return -1;
 }

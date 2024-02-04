@@ -24,11 +24,8 @@ public:
 
 	inline mbedtls_pk_context* GetPrivateKey() const { return PrivateKey.get(); }
 	inline mbedtls_x509_crt* GetCertificate() const { return Certificate.get(); }
+	inline const std::string& GetCertificateTumbprint() const { return CertificateThumbprint; }
 
-	void AddAllowedCertificate(mbedtls_x509_crt*);
-	void AddDeniedCertificate(mbedtls_x509_crt*);
-	bool CertificateIsAllowed(mbedtls_x509_crt*);
-	bool CertificateIsDenied(mbedtls_x509_crt*);
 	void ClearKnownCertificates();
 
 	std::unique_ptr<mbedtls_ssl_config, void(*)(mbedtls_ssl_config*)>GenerateConfig(bool) const;
@@ -52,10 +49,12 @@ private:
 	static const std::string CaCert;
 	std::unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)> CaPrivateKey;
 	std::unique_ptr<mbedtls_x509_crt, void(*)(mbedtls_x509_crt*)> CaCertificate;
+	std::string CaCertificateThumbprint;
 
 	const std::filesystem::path BackingDir;
 	std::unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)> PrivateKey;
 	std::unique_ptr<mbedtls_x509_crt, void(*)(mbedtls_x509_crt*)> Certificate;
+	std::string CertificateThumbprint;
 	ThumbprintStore AllowedCertificates;
 	ThumbprintStore DeniedCertificates;
 
@@ -64,8 +63,10 @@ private:
 	static mbedtls_x509_crt* NewMbedTlsCertContext();
 	static void FreeMbedTlsCertContext(mbedtls_x509_crt*);
 
-	static std::tuple<std::vector<unsigned char>, std::vector<unsigned char>> GenerateKeyAndCertificateDer(mbedtls_pk_context*, mbedtls_x509_crt*);
 	void LoadPrivateKey(const std::vector<unsigned char>&);
 	void LoadCertificate(const std::vector<unsigned char>&);
+
+	static std::tuple<std::vector<unsigned char>, std::vector<unsigned char>> GenerateKeyAndCertificateDer(mbedtls_pk_context*, mbedtls_x509_crt*);
+	static std::string GetSha1Thumbprint(mbedtls_x509_crt*);
 	static std::string GetSha1Thumbprint(const std::span<unsigned char>&);
 };
