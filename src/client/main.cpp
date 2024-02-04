@@ -60,7 +60,7 @@ int main()
     mbedtls_ssl_init(sslCtx.get());
     auto sslConfig = certStore.GenerateConfig(false);
     mbedtls_ssl_set_bio(sslCtx.get(), socket.get(), mbedtls_net_send, mbedtls_net_recv, nullptr);
-    if (auto ret = mbedtls_ssl_set_hostname(sslCtx.get(), CertStore::HostName.c_str()); ret != 0)
+    if (auto ret = mbedtls_ssl_set_hostname(sslCtx.get(), CertStore::HostName.data()); ret != 0)
     {
         throw runtime_error(std::format("Failed setting hostname. Err code: {}", ret));
     }

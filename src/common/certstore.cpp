@@ -22,12 +22,12 @@ namespace
     const string HostCertificateFileName("host_cert.der");
 
     constexpr unsigned int RsaKeySize = 2048;
-    constexpr bool ForceCertRegeneration = false;
+    constexpr bool ForceStoreClear = true;
 }
 
-const string CertStore::HostName("RInstaller Instance");
+const string_view CertStore::HostName("RInstaller Instance");
 
-const string CertStore::CaKey("-----BEGIN PRIVATE KEY-----\n\
+const string_view CertStore::CaKey("-----BEGIN PRIVATE KEY-----\n\
 MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCzms3awwiSmROT\n\
 +76hxFHDjUmxQRnJ5gd9dai3ay0GzUItwpio3nFZBorDjsLYaAsAWQgKx9444LIK\n\
 qDk/9umiPKWiOuT03kZIexcJlWj79adsmNYMjJC5VIPpHnFq+8NMD+obGZmCv1T7\n\
@@ -56,7 +56,7 @@ necC1NhrKysGZiYJdI59/RZ5Nlzy1hufipFlwwKXOTE6vjtbARGR9LsfFi1o0PFm\n\
 HGqo2n13BWKoeOrRg5AmlQ==\n\
 -----END PRIVATE KEY-----");
 
-const std::string CertStore::CaCert("-----BEGIN CERTIFICATE-----\n\
+const std::string_view CertStore::CaCert("-----BEGIN CERTIFICATE-----\n\
 MIIDnTCCAoWgAwIBAgIUOfPCYQQmB4rDP3iLfXqc1dSLAJ8wDQYJKoZIhvcNAQEL\n\
 BQAwXTELMAkGA1UEBhMCVVMxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoM\n\
 GEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDEWMBQGA1UEAwwNUkluc3RhbGxlciBD\n\
@@ -141,7 +141,7 @@ CertStore::CertStore(const filesystem::path& backingDir) :
     certPath.append(HostCertificateFileName);
 
     bool loadSuccess = false;
-    if(!ForceCertRegeneration)
+    if(!ForceStoreClear)
     {
         ifstream keyFile(keyPath, ios::binary | ios::ate);
         ifstream certFile(certPath, ios::binary | ios::ate);
@@ -165,6 +165,11 @@ CertStore::CertStore(const filesystem::path& backingDir) :
             {
             }
         }
+    }
+    else
+    {
+        AllowedCertificates.Clear();
+        DeniedCertificates.Clear();
     }
 
     if (!loadSuccess)

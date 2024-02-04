@@ -4,6 +4,7 @@
 #include <memory>
 #include <span>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 #include <vector>
 
@@ -18,7 +19,7 @@ struct mbedtls_x509_crt;
 class CertStore
 {
 public:
-	static const std::string HostName;
+	static const std::string_view HostName;
 
 	CertStore(const std::filesystem::path&);
 
@@ -45,8 +46,8 @@ private:
 		std::unordered_set<std::string> Store;
 	};
 
-	static const std::string CaKey;
-	static const std::string CaCert;
+	static const std::string_view CaKey;
+	static const std::string_view CaCert;
 	std::unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)> CaPrivateKey;
 	std::unique_ptr<mbedtls_x509_crt, void(*)(mbedtls_x509_crt*)> CaCertificate;
 	std::string CaCertificateThumbprint;
