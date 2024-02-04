@@ -22,7 +22,7 @@ namespace
     const string HostCertificateFileName("host_cert.der");
 
     constexpr unsigned int RsaKeySize = 2048;
-    constexpr bool ForceStoreClear = true;
+    constexpr bool ForceStoreClear = false;
 }
 
 const string_view CertStore::HostName("RInstaller Instance");
