@@ -419,7 +419,7 @@ string CertStore::GetSha1Thumbprint(const span<unsigned char>& input)
 int CertStore::MbedTlsIOStreamInteractiveCertVerification(void* pCertStore, mbedtls_x509_crt* cert, int chainDepth, uint32_t* flags)
 {
     auto thumbprint = GetSha1Thumbprint(cert);
-    auto certStore = reinterpret_cast<CertStore*>(cert);
+    auto certStore = reinterpret_cast<CertStore*>(pCertStore);
 
     if (certStore->AllowedCertificates.Contains(thumbprint) || certStore->CaCertificateThumbprint.compare(thumbprint))
     {
