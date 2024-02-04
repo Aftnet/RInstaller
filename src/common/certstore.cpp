@@ -421,7 +421,7 @@ int CertStore::MbedTlsIOStreamInteractiveCertVerification(void* pCertStore, mbed
     auto thumbprint = GetSha1Thumbprint(cert);
     auto certStore = reinterpret_cast<CertStore*>(pCertStore);
 
-    if (certStore->AllowedCertificates.Contains(thumbprint) || certStore->CaCertificateThumbprint.compare(thumbprint))
+    if (certStore->AllowedCertificates.Contains(thumbprint) || certStore->CaCertificateThumbprint.compare(thumbprint) == 0)
     {
         return 0;
     }
