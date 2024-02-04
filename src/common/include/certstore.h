@@ -50,6 +50,8 @@ private:
 
 	static const std::string CaKey;
 	static const std::string CaCert;
+	std::unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)> CaPrivateKey;
+	std::unique_ptr<mbedtls_x509_crt, void(*)(mbedtls_x509_crt*)> CaCertificate;
 
 	const std::filesystem::path BackingDir;
 	std::unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)> PrivateKey;
@@ -62,7 +64,7 @@ private:
 	static mbedtls_x509_crt* NewMbedTlsCertContext();
 	static void FreeMbedTlsCertContext(mbedtls_x509_crt*);
 
-	static std::tuple<std::vector<unsigned char>, std::vector<unsigned char>> GenerateKeyAndCertificateDer();
+	static std::tuple<std::vector<unsigned char>, std::vector<unsigned char>> GenerateKeyAndCertificateDer(mbedtls_pk_context*, mbedtls_x509_crt*);
 	void LoadPrivateKey(const std::vector<unsigned char>&);
 	void LoadCertificate(const std::vector<unsigned char>&);
 	static std::string GetSha1Thumbprint(const std::span<unsigned char>&);

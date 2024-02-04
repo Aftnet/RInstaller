@@ -8,7 +8,7 @@
 
 namespace
 {
-	constexpr int MbedTLSDebugLevel = 4;
+	constexpr int MbedTLSDebugLevel = 1;
 }
 
 MbedtlsMgr::MbedtlsMgr():

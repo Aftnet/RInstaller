@@ -21,7 +21,7 @@ namespace
     const string HostCertificateFileName("host_cert.der");
 
     constexpr unsigned int RsaKeySize = 2048;
-    constexpr bool ForceCertRegeneration = true;
+    constexpr bool ForceCertRegeneration = false;
 }
 
 const string CertStore::HostName("RInstaller Instance");
@@ -116,12 +116,23 @@ void CertStore::ThumbprintStore::Clear()
 }
 
 CertStore::CertStore(const filesystem::path& backingDir) :
+    CaPrivateKey(NewMbedTlsPkContext(), FreeMbedTlsPkContext),
+    CaCertificate(NewMbedTlsCertContext(), FreeMbedTlsCertContext),
     BackingDir(backingDir),
     PrivateKey(NewMbedTlsPkContext(), FreeMbedTlsPkContext),
     Certificate(NewMbedTlsCertContext(), FreeMbedTlsCertContext),
     AllowedCertificates(filesystem::path(backingDir).append(AllowedCertificatesFileName)),
     DeniedCertificates(filesystem::path(backingDir).append(DeniedCertificatesFileName))
 {
+    if (auto ret = mbedtls_pk_parse_key(CaPrivateKey.get(), (const unsigned char*)CaKey.data(), CaKey.length() + 1, nullptr, 0, mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg()); ret != 0)
+    {
+        throw runtime_error(format("Unable to load CA key. Err code: {}", ret));
+    }
+    if (auto ret = mbedtls_x509_crt_parse(CaCertificate.get(), (const unsigned char*)CaCert.data(), CaCert.length() + 1); ret != 0)
+    {
+        throw runtime_error(format("Unable to load CA certificate. Err code: {}", ret));
+    }
+
     auto keyPath = backingDir;
     keyPath.append(HostKeyFileName);
     auto certPath = backingDir;
@@ -156,7 +167,7 @@ CertStore::CertStore(const filesystem::path& backingDir) :
 
     if (!loadSuccess)
     {
-        auto generated = GenerateKeyAndCertificateDer();
+        auto generated = GenerateKeyAndCertificateDer(CaPrivateKey.get(), CaCertificate.get());
         auto& keyBuffer = get<0>(generated);
         auto& certBuffer = get<1>(generated);
         LoadPrivateKey(keyBuffer);
@@ -250,6 +261,8 @@ unique_ptr<mbedtls_ssl_config, void(*)(mbedtls_ssl_config*)>CertStore::GenerateC
     mbedtls_ssl_conf_dbg(sslConfig.get(), &MbedtlsMgr::DebugPrint, nullptr);
     mbedtls_ssl_conf_preference_order(sslConfig.get(), configForServer ? MBEDTLS_SSL_SRV_CIPHERSUITE_ORDER_SERVER : MBEDTLS_SSL_SRV_CIPHERSUITE_ORDER_CLIENT);
     mbedtls_ssl_conf_authmode(sslConfig.get(), MBEDTLS_SSL_VERIFY_REQUIRED);
+    mbedtls_ssl_conf_ca_chain(sslConfig.get(), CaCertificate.get(), nullptr);
+
     mbedtls_ssl_conf_verify(sslConfig.get(), &MbedTlsIOStreamInteractiveCertVerification, (void*)this);
     if (auto ret = mbedtls_ssl_conf_own_cert(sslConfig.get(), GetCertificate(), GetPrivateKey()); ret != 0)
     {
@@ -259,20 +272,8 @@ unique_ptr<mbedtls_ssl_config, void(*)(mbedtls_ssl_config*)>CertStore::GenerateC
     return sslConfig;
 }
 
-tuple<vector<unsigned char>, vector<unsigned char>> CertStore::GenerateKeyAndCertificateDer()
+tuple<vector<unsigned char>, vector<unsigned char>> CertStore::GenerateKeyAndCertificateDer(mbedtls_pk_context* caKey, mbedtls_x509_crt* caCert)
 {
-    unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)> caKey(NewMbedTlsPkContext(), FreeMbedTlsPkContext);
-    if (auto ret = mbedtls_pk_parse_key(caKey.get(), (const unsigned char*)CaKey.data(), CaKey.length() + 1, nullptr, 0, mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg()); ret != 0)
-    {
-        throw runtime_error(format("Unable to load CA key. Err code: {}", ret));
-    }
-
-    unique_ptr<mbedtls_x509_crt, void(*)(mbedtls_x509_crt*)> caCert(NewMbedTlsCertContext(), FreeMbedTlsCertContext);
-    if (auto ret = mbedtls_x509_crt_parse(caCert.get(), (const unsigned char*)CaCert.data(), CaCert.length() + 1); ret != 0)
-    {
-        throw runtime_error(format("Unable to load CA certificate. Err code: {}", ret));
-    }
-
     unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)> key(NewMbedTlsPkContext(), FreeMbedTlsPkContext);
     if (auto ret = mbedtls_pk_setup(key.get(), mbedtls_pk_info_from_type(MBEDTLS_PK_RSA)); ret != 0)
     {
@@ -301,7 +302,7 @@ tuple<vector<unsigned char>, vector<unsigned char>> CertStore::GenerateKeyAndCer
     
     mbedtls_x509write_crt_set_md_alg(crt.get(), MBEDTLS_MD_SHA256);
     mbedtls_x509write_crt_set_subject_key(crt.get(), key.get());
-    mbedtls_x509write_crt_set_issuer_key(crt.get(), caKey.get());
+    mbedtls_x509write_crt_set_issuer_key(crt.get(), caKey);
     mbedtls_mpi serial;
     mbedtls_mpi_init(&serial);
     mbedtls_mpi_lset(&serial, 1);
@@ -428,5 +429,5 @@ string CertStore::GetSha1Thumbprint(const span<unsigned char>& input)
 int CertStore::MbedTlsIOStreamInteractiveCertVerification(void* pCertStore, mbedtls_x509_crt* pCertChain, int, uint32_t* chainLength)
 {
     auto certStore = reinterpret_cast<CertStore*>(pCertStore);
-    return 0;
+    return -1;
 }
