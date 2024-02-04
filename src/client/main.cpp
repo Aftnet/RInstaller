@@ -23,11 +23,6 @@ int main()
     unique_ptr<mbedtls_net_context, void(*)(mbedtls_net_context*)> socket(new mbedtls_net_context, [](auto d) { mbedtls_net_free(d); delete d; });
     mbedtls_net_init(socket.get());
 
-    unique_ptr<mbedtls_ssl_context, void(*)(mbedtls_ssl_context*)> sslCtx(new mbedtls_ssl_context, [](auto d) { mbedtls_ssl_free(d); delete d; });
-    mbedtls_ssl_init(sslCtx.get());
-    unique_ptr<mbedtls_ssl_config, void(*)(mbedtls_ssl_config*)> sslConfig(new mbedtls_ssl_config, [](auto d) { mbedtls_ssl_config_free(d); delete d; });
-    mbedtls_ssl_config_init(sslConfig.get());
-
     cout << "Connecting to server" << endl;
     for (;;)
     {
@@ -59,19 +54,10 @@ int main()
         throw runtime_error(std::format("Failed setting socket to non blocking. Err code: {}", ret));
     }
 
-    if (auto ret = mbedtls_ssl_config_defaults(sslConfig.get(), MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT); ret != 0)
-    {
-        throw runtime_error(std::format("Failed setting ssl defaults. Err code: {}", ret));
-    }
-    mbedtls_ssl_conf_rng(sslConfig.get(), mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg());
-    mbedtls_ssl_conf_dbg(sslConfig.get(), &MbedtlsMgr::DebugPrint, nullptr);
-    mbedtls_debug_set_threshold(1);
-    mbedtls_ssl_conf_authmode(sslConfig.get(), MBEDTLS_SSL_VERIFY_REQUIRED);
-    if (auto ret = mbedtls_ssl_conf_own_cert(sslConfig.get(), certStore.GetCertificate(), certStore.GetPrivateKey()); ret != 0)
-    {
-        throw runtime_error(std::format("Failed setting ssl certificate. Err code: {}", ret));
-    }
-
+    
+    unique_ptr<mbedtls_ssl_context, void(*)(mbedtls_ssl_context*)> sslCtx(new mbedtls_ssl_context, [](auto d) { mbedtls_ssl_free(d); delete d; });
+    mbedtls_ssl_init(sslCtx.get());
+    auto sslConfig = certStore.GenerateConfig(false);
     mbedtls_ssl_set_bio(sslCtx.get(), socket.get(), mbedtls_net_send, mbedtls_net_recv, nullptr);
     mbedtls_ssl_set_verify(sslCtx.get(), &CertStore::MbedTlsIOStreamInteractiveCertVerification, &certStore);
     if (auto ret = mbedtls_ssl_set_hostname(sslCtx.get(), CertStore::HostName.c_str()); ret != 0)

@@ -15,6 +15,14 @@ MbedtlsMgr::MbedtlsMgr():
 	{
 		throw std::runtime_error("Failed initializing drdbg");
 	}
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+	if (auto ret = sa_crypto_init(); ret != 0)
+	{
+		throw std::runtime_error("Failed initializing PSA crypto");
+	}
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
+
 }
 
 void MbedtlsMgr::DebugPrint(void* ctx, int level, const char* file, int line, const char* str)

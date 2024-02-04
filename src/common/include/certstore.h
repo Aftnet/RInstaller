@@ -11,6 +11,7 @@ class MbedtlsMgr;
 struct mbedtls_entropy_context;
 struct mbedtls_ctr_drbg_context;
 struct mbedtls_pk_context;
+struct mbedtls_ssl_config;
 struct mbedtls_x509write_cert;
 struct mbedtls_x509_crt;
 
@@ -21,14 +22,16 @@ public:
 
 	CertStore(const std::filesystem::path&);
 
-	inline mbedtls_pk_context* GetPrivateKey() { return PrivateKey.get(); }
-	inline mbedtls_x509_crt* GetCertificate() { return Certificate.get(); }
+	inline mbedtls_pk_context* GetPrivateKey() const { return PrivateKey.get(); }
+	inline mbedtls_x509_crt* GetCertificate() const { return Certificate.get(); }
 
 	void AddAllowedCertificate(mbedtls_x509_crt*);
 	void AddDeniedCertificate(mbedtls_x509_crt*);
 	bool CertificateIsAllowed(mbedtls_x509_crt*);
 	bool CertificateIsDenied(mbedtls_x509_crt*);
 	void ClearKnownCertificates();
+
+	std::unique_ptr<mbedtls_ssl_config, void(*)(mbedtls_ssl_config*)>GenerateConfig(bool) const;
 
 	static int MbedTlsIOStreamInteractiveCertVerification(void*, mbedtls_x509_crt*, int, uint32_t*);
 private:
