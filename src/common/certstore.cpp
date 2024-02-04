@@ -1,11 +1,14 @@
 #include "certstore.h"
+#include "mbedtls/asn1.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/debug.h"
 #include "mbedtls/entropy.h"
+#include "mbedtls/oid.h"
 #include "mbedtls/ssl.h"
 #include "mbedtls/x509.h"
 #include "mbedtls/x509_crt.h"
 #include "mbedtlsmgr.h"
+#include <array>
 #include <format>
 #include <fstream>
 
@@ -19,6 +22,7 @@ namespace
     const string HostCertificateFileName("host_cert.der");
 
     constexpr unsigned int RsaKeySize = 2048;
+    constexpr bool ForceCertRegeneration = false;
 }
 
 string CertStore::HostName("RInstaller Instance");
@@ -73,6 +77,7 @@ CertStore::CertStore(const filesystem::path& backingDir) :
     certPath.append(HostCertificateFileName);
 
     bool loadSuccess = false;
+    if(!ForceCertRegeneration)
     {
         ifstream keyFile(keyPath, ios::binary | ios::ate);
         ifstream certFile(certPath, ios::binary | ios::ate);
@@ -97,7 +102,7 @@ CertStore::CertStore(const filesystem::path& backingDir) :
             }
         }
     }
-    
+
     if (!loadSuccess)
     {
         auto generated = GenerateKeyAndCertificateDer();
@@ -188,12 +193,12 @@ unique_ptr<mbedtls_ssl_config, void(*)(mbedtls_ssl_config*)>CertStore::GenerateC
     {
         throw runtime_error(format("Failed setting ssl defaults. Err code: {}", ret));
     }
-    mbedtls_ssl_conf_min_version(sslConfig.get(), MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_4);
+    mbedtls_ssl_conf_min_version(sslConfig.get(), MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_3);
 
     mbedtls_ssl_conf_rng(sslConfig.get(), mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg());
     mbedtls_ssl_conf_dbg(sslConfig.get(), &MbedtlsMgr::DebugPrint, nullptr);
     mbedtls_ssl_conf_preference_order(sslConfig.get(), configForServer ? MBEDTLS_SSL_SRV_CIPHERSUITE_ORDER_SERVER : MBEDTLS_SSL_SRV_CIPHERSUITE_ORDER_CLIENT);
-    mbedtls_debug_set_threshold(1);
+    mbedtls_debug_set_threshold(4);
     mbedtls_ssl_conf_authmode(sslConfig.get(), MBEDTLS_SSL_VERIFY_REQUIRED);
     if (auto ret = mbedtls_ssl_conf_own_cert(sslConfig.get(), GetCertificate(), GetPrivateKey()); ret != 0)
     {
@@ -256,7 +261,35 @@ tuple<vector<unsigned char>, vector<unsigned char>> CertStore::GenerateKeyAndCer
     {
         throw runtime_error(format("Unable to generate certificate. Err code: {}", ret));
     }
-    if (auto ret = mbedtls_x509write_crt_set_key_usage(crt.get(), MBEDTLS_X509_KU_KEY_AGREEMENT); ret != 0)
+    if (auto ret = mbedtls_x509write_crt_set_key_usage(crt.get(), MBEDTLS_X509_KU_DIGITAL_SIGNATURE); ret != 0)
+    {
+        throw runtime_error(format("Unable to generate certificate. Err code: {}", ret));
+    }
+
+    array<mbedtls_asn1_sequence, 2> certEkus
+    {
+        mbedtls_asn1_sequence
+        {
+            mbedtls_asn1_buf
+            {
+                MBEDTLS_ASN1_OID,
+                strlen(MBEDTLS_OID_SERVER_AUTH),
+                (unsigned char*)MBEDTLS_OID_SERVER_AUTH
+            },
+            &(certEkus.at(1))
+        },
+        mbedtls_asn1_sequence
+        {
+            mbedtls_asn1_buf
+            {
+                MBEDTLS_ASN1_OID,
+                strlen(MBEDTLS_OID_SERVER_AUTH),
+                (unsigned char*)MBEDTLS_OID_CLIENT_AUTH
+            },
+            nullptr,
+        }
+    };
+    if (auto ret = mbedtls_x509write_crt_set_ext_key_usage(crt.get(), certEkus.data()); ret != 0)
     {
         throw runtime_error(format("Unable to generate certificate. Err code: {}", ret));
     }
@@ -329,5 +362,5 @@ string CertStore::GetSha1Thumbprint(const span<unsigned char>& input)
 int CertStore::MbedTlsIOStreamInteractiveCertVerification(void* pCertStore, mbedtls_x509_crt* pCertChain, int, uint32_t* chainLength)
 {
     auto certStore = reinterpret_cast<CertStore*>(pCertStore);
-    return -1;
+    return 0;
 }
