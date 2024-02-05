@@ -12,6 +12,7 @@
 #include <fstream>
 #include <iostream>
 
+using namespace RInstaller;
 using namespace std;
 
 namespace
@@ -25,9 +26,9 @@ namespace
     constexpr bool ForceStoreClear = false;
 }
 
-const string_view CertStore::HostName("RInstaller Instance");
+const string_view CertificateStore::HostName("RInstaller Instance");
 
-const string_view CertStore::CaKey("-----BEGIN PRIVATE KEY-----\n\
+const string_view CertificateStore::CaKey("-----BEGIN PRIVATE KEY-----\n\
 MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCzms3awwiSmROT\n\
 +76hxFHDjUmxQRnJ5gd9dai3ay0GzUItwpio3nFZBorDjsLYaAsAWQgKx9444LIK\n\
 qDk/9umiPKWiOuT03kZIexcJlWj79adsmNYMjJC5VIPpHnFq+8NMD+obGZmCv1T7\n\
@@ -56,7 +57,7 @@ necC1NhrKysGZiYJdI59/RZ5Nlzy1hufipFlwwKXOTE6vjtbARGR9LsfFi1o0PFm\n\
 HGqo2n13BWKoeOrRg5AmlQ==\n\
 -----END PRIVATE KEY-----");
 
-const std::string_view CertStore::CaCert("-----BEGIN CERTIFICATE-----\n\
+const std::string_view CertificateStore::CaCert("-----BEGIN CERTIFICATE-----\n\
 MIIDnTCCAoWgAwIBAgIUOfPCYQQmB4rDP3iLfXqc1dSLAJ8wDQYJKoZIhvcNAQEL\n\
 BQAwXTELMAkGA1UEBhMCVVMxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoM\n\
 GEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDEWMBQGA1UEAwwNUkluc3RhbGxlciBD\n\
@@ -79,7 +80,7 @@ xjxLrdGTYt58hx/a9qw0/RVTuCG74DEhyiBfvASFRsQjN9EWWOs3rF9kRrJoNDkc\n\
 uR38HomSTm2EWe+M1sP4rAA=\n\
 -----END CERTIFICATE-----");
 
-CertStore::ThumbprintStore::ThumbprintStore(const filesystem::path& backingFile) :
+CertificateStore::ThumbprintStore::ThumbprintStore(const filesystem::path& backingFile) :
     BackingFile(backingFile)
 {
     ifstream storeFile(BackingFile);
@@ -93,12 +94,12 @@ CertStore::ThumbprintStore::ThumbprintStore(const filesystem::path& backingFile)
     }
 }
 
-bool CertStore::ThumbprintStore::Contains(const string& thumbprint) const
+bool CertificateStore::ThumbprintStore::Contains(const string& thumbprint) const
 {
     return Store.contains(thumbprint);
 }
 
-void CertStore::ThumbprintStore::Add(const string& thumbprint)
+void CertificateStore::ThumbprintStore::Add(const string& thumbprint)
 {
     if (Store.contains(thumbprint))
     {
@@ -110,13 +111,13 @@ void CertStore::ThumbprintStore::Add(const string& thumbprint)
     storeFile << thumbprint << endl;
 }
 
-void CertStore::ThumbprintStore::Clear()
+void CertificateStore::ThumbprintStore::Clear()
 {
     Store.clear();
     ofstream storeFile(BackingFile, ios::trunc);
 }
 
-CertStore::CertStore(const filesystem::path& backingDir) :
+CertificateStore::CertificateStore(const filesystem::path& backingDir) :
     CaPrivateKey(NewMbedTlsPkContext(), FreeMbedTlsPkContext),
     CaCertificate(NewMbedTlsCertContext(), FreeMbedTlsCertContext),
     BackingDir(backingDir),
@@ -197,39 +198,39 @@ CertStore::CertStore(const filesystem::path& backingDir) :
     }
 }
 
-mbedtls_pk_context* CertStore::NewMbedTlsPkContext()
+mbedtls_pk_context* CertificateStore::NewMbedTlsPkContext()
 {
     auto ctx = new mbedtls_pk_context;
     mbedtls_pk_init(ctx);
     return ctx;
 }
 
-void CertStore::FreeMbedTlsPkContext(mbedtls_pk_context* ctx)
+void CertificateStore::FreeMbedTlsPkContext(mbedtls_pk_context* ctx)
 {
     mbedtls_pk_free(ctx);
     delete ctx;
 }
 
-mbedtls_x509_crt* CertStore::NewMbedTlsCertContext()
+mbedtls_x509_crt* CertificateStore::NewMbedTlsCertContext()
 {
     auto ctx = new mbedtls_x509_crt;
     mbedtls_x509_crt_init(ctx);
     return ctx;
 }
 
-void CertStore::FreeMbedTlsCertContext(mbedtls_x509_crt* ctx)
+void CertificateStore::FreeMbedTlsCertContext(mbedtls_x509_crt* ctx)
 {
     mbedtls_x509_crt_free(ctx);
     delete ctx;
 }
 
-void CertStore::ClearKnownCertificates()
+void CertificateStore::ClearKnownCertificates()
 {
     AllowedCertificates.Clear();
     DeniedCertificates.Clear();
 }
 
-unique_ptr<mbedtls_ssl_config, void(*)(mbedtls_ssl_config*)>CertStore::GenerateConfig(bool configForServer) const
+unique_ptr<mbedtls_ssl_config, void(*)(mbedtls_ssl_config*)>CertificateStore::GenerateConfig(bool configForServer) const
 {
     unique_ptr<mbedtls_ssl_config, void(*)(mbedtls_ssl_config*)> sslConfig(new mbedtls_ssl_config, [](auto d) { mbedtls_ssl_config_free(d); delete d; });
     mbedtls_ssl_config_init(sslConfig.get());
@@ -255,7 +256,7 @@ unique_ptr<mbedtls_ssl_config, void(*)(mbedtls_ssl_config*)>CertStore::GenerateC
     return sslConfig;
 }
 
-tuple<vector<unsigned char>, vector<unsigned char>> CertStore::GenerateKeyAndCertificateDer(mbedtls_pk_context* caKey, mbedtls_x509_crt* caCert)
+tuple<vector<unsigned char>, vector<unsigned char>> CertificateStore::GenerateKeyAndCertificateDer(mbedtls_pk_context* caKey, mbedtls_x509_crt* caCert)
 {
     unique_ptr<mbedtls_pk_context, void(*)(mbedtls_pk_context*)> key(NewMbedTlsPkContext(), FreeMbedTlsPkContext);
     if (auto ret = mbedtls_pk_setup(key.get(), mbedtls_pk_info_from_type(MBEDTLS_PK_RSA)); ret != 0)
@@ -295,7 +296,7 @@ tuple<vector<unsigned char>, vector<unsigned char>> CertStore::GenerateKeyAndCer
     }
     mbedtls_mpi_free(&serial);
 
-    const string subjName(string("CN=").append(CertStore::HostName));
+    const string subjName(string("CN=").append(CertificateStore::HostName));
     if (auto ret = mbedtls_x509write_crt_set_subject_name(crt.get(), subjName.c_str()); ret != 0)
     {
         throw runtime_error(format("Unable to generate certificate. Err code: {}", ret));
@@ -362,7 +363,7 @@ tuple<vector<unsigned char>, vector<unsigned char>> CertStore::GenerateKeyAndCer
     return make_tuple(move(keyBuffer), move(certBuffer));
 }
 
-void CertStore::LoadPrivateKey(const vector<unsigned char>& buffer)
+void CertificateStore::LoadPrivateKey(const vector<unsigned char>& buffer)
 {
     if (auto ret = mbedtls_pk_parse_key(PrivateKey.get(), buffer.data(), buffer.size(), nullptr, 0, mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg()); ret != 0)
     {
@@ -370,7 +371,7 @@ void CertStore::LoadPrivateKey(const vector<unsigned char>& buffer)
     }
 }
 
-void CertStore::LoadCertificate(const vector<unsigned char>& buffer)
+void CertificateStore::LoadCertificate(const vector<unsigned char>& buffer)
 {
     if (auto ret = mbedtls_x509_crt_parse_der(Certificate.get(), buffer.data(), buffer.size()); ret != 0)
     {
@@ -380,12 +381,12 @@ void CertStore::LoadCertificate(const vector<unsigned char>& buffer)
     CertificateThumbprint = GetSha1Thumbprint(Certificate.get());
 }
 
-std::string CertStore::GetSha1Thumbprint(mbedtls_x509_crt* cert)
+std::string CertificateStore::GetSha1Thumbprint(mbedtls_x509_crt* cert)
 {
     return GetSha1Thumbprint(span(cert->raw.p, cert->raw.p + cert->raw.len));
 }
 
-string CertStore::GetSha1Thumbprint(const span<unsigned char>& input)
+string CertificateStore::GetSha1Thumbprint(const span<unsigned char>& input)
 {
     unique_ptr<mbedtls_sha1_context, void(*)(mbedtls_sha1_context*)> sha1(new mbedtls_sha1_context, [](mbedtls_sha1_context* d) { mbedtls_sha1_free(d); });
 
@@ -416,16 +417,16 @@ string CertStore::GetSha1Thumbprint(const span<unsigned char>& input)
     return outStr;
 }
 
-int CertStore::MbedTlsIOStreamInteractiveCertVerification(void* pCertStore, mbedtls_x509_crt* cert, int chainDepth, uint32_t* flags)
+int CertificateStore::MbedTlsIOStreamInteractiveCertVerification(void* pCertificateStore, mbedtls_x509_crt* cert, int chainDepth, uint32_t* flags)
 {
     auto thumbprint = GetSha1Thumbprint(cert);
-    auto certStore = reinterpret_cast<CertStore*>(pCertStore);
+    auto CertificateStore = reinterpret_cast<RInstaller::CertificateStore*>(pCertificateStore);
 
-    if (certStore->AllowedCertificates.Contains(thumbprint) || certStore->CaCertificateThumbprint.compare(thumbprint) == 0)
+    if (CertificateStore->AllowedCertificates.Contains(thumbprint) || CertificateStore->CaCertificateThumbprint.compare(thumbprint) == 0)
     {
         return 0;
     }
-    else if (certStore->DeniedCertificates.Contains(thumbprint))
+    else if (CertificateStore->DeniedCertificates.Contains(thumbprint))
     {
         return -1;
     }
@@ -444,7 +445,7 @@ int CertStore::MbedTlsIOStreamInteractiveCertVerification(void* pCertStore, mbed
 
         if(input.compare("y") == 0)
         {
-            certStore->AllowedCertificates.Add(thumbprint);
+            CertificateStore->AllowedCertificates.Add(thumbprint);
             return 0;
         }
         else if (input.compare("o") == 0)
@@ -457,7 +458,7 @@ int CertStore::MbedTlsIOStreamInteractiveCertVerification(void* pCertStore, mbed
         }
         else if (input.compare("x") == 0)
         {
-            certStore->DeniedCertificates.Add(thumbprint);
+            CertificateStore->DeniedCertificates.Add(thumbprint);
             return 0;
         }
     }

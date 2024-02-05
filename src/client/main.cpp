@@ -13,12 +13,17 @@
 #include <thread>
 #include <vector>
 
+#include "client.h"
+
 using namespace std;
 
 int main()
 {
-    auto& mbedtlsMgr = MbedtlsMgr::GetInstance();
-    CertStore certStore(filesystem::current_path());
+    auto client = rinst_client_get("");
+    rinst_client_free(client);
+
+    auto& mbedtlsMgr = RInstaller::MbedtlsMgr::GetInstance();
+    RInstaller::CertificateStore certStore(filesystem::current_path());
     cout << "Local cert thumbprint: " << certStore.GetCertificateTumbprint() << endl;
 
     unique_ptr<mbedtls_net_context, void(*)(mbedtls_net_context*)> socket(new mbedtls_net_context, [](auto d) { mbedtls_net_free(d); delete d; });
@@ -54,13 +59,12 @@ int main()
     {
         throw runtime_error(std::format("Failed setting socket to non blocking. Err code: {}", ret));
     }
-
     
     unique_ptr<mbedtls_ssl_context, void(*)(mbedtls_ssl_context*)> sslCtx(new mbedtls_ssl_context, [](auto d) { mbedtls_ssl_free(d); delete d; });
     mbedtls_ssl_init(sslCtx.get());
     auto sslConfig = certStore.GenerateConfig(false);
     mbedtls_ssl_set_bio(sslCtx.get(), socket.get(), mbedtls_net_send, mbedtls_net_recv, nullptr);
-    if (auto ret = mbedtls_ssl_set_hostname(sslCtx.get(), CertStore::HostName.data()); ret != 0)
+    if (auto ret = mbedtls_ssl_set_hostname(sslCtx.get(), RInstaller::CertificateStore::HostName.data()); ret != 0)
     {
         throw runtime_error(std::format("Failed setting hostname. Err code: {}", ret));
     }

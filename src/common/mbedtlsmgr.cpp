@@ -6,6 +6,8 @@
 #include <iostream>
 #include <stdexcept>
 
+using namespace RInstaller;
+
 namespace
 {
 	constexpr int MbedTLSDebugLevel = 1;
