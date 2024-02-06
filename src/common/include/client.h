@@ -1,9 +1,13 @@
 #pragma once
 
-#ifdef __cplusplus
-
 #include "certstore.h"
+#include <atomic>
+#include <chrono>
 #include <filesystem>
+#include <memory>
+#include <string>
+
+struct mbedtls_net_context;
 
 namespace RInstaller
 {
@@ -11,27 +15,26 @@ namespace RInstaller
 
 	class Client
 	{
+		enum class Result
+		{
+			Ok, Busy, AlreadyConnected, HostNotResolvable, HostNotConnectable, TlsNegotiationError, OtherError
+		};
+
 	private:
+		std::atomic_bool Busy, CancelRequested;
 		MbedtlsMgr& TlsMgr;
 		CertificateStore CertStore;
+		std::unique_ptr<mbedtls_net_context, void(*)(mbedtls_net_context*)> Socket;
+		std::chrono::steady_clock::time_point TimeoutBase;
 
 	public:
 		Client(const std::filesystem::path&);
+		Result Connect(const std::string&, const std::chrono::milliseconds&);
+		Result Disconnect();
+		Result PushFile();
+		Result Install();
+		Result Cancel();
+
+		void ProgressCB(int);
 	};
 }
-#endif
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-	class rinst_client_c;
-	typedef rinst_client_c* rinst_client;
-
-	rinst_client rinst_client_get(const char*);
-
-	void rinst_client_free(rinst_client);
-
-#ifdef __cplusplus
-}
-#endif

@@ -27,7 +27,7 @@ int main()
     unique_ptr<mbedtls_net_context, void(*)(mbedtls_net_context*)> clientSocket(new mbedtls_net_context, [](auto d) { mbedtls_net_free(d); delete d; });
     mbedtls_net_init(clientSocket.get());
 
-    if (auto ret = mbedtls_net_bind(listenSocket.get(), nullptr, PortNumber.c_str(), MBEDTLS_NET_PROTO_TCP); ret != 0)
+    if (auto ret = mbedtls_net_bind(listenSocket.get(), nullptr, std::to_string(RInstaller::PortNumber).c_str(), MBEDTLS_NET_PROTO_TCP); ret != 0)
     {
         throw runtime_error(std::format("Failed listening on network interface. Err code: {}", ret));
     }

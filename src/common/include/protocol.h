@@ -2,4 +2,8 @@
 
 #include <string>
 
-const std::string PortNumber("46353");
+namespace RInstaller
+{
+	constexpr unsigned int PortNumber = 46353;
+	constexpr unsigned int MbedTlsOk = 0;
+}

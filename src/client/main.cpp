@@ -19,9 +19,6 @@ using namespace std;
 
 int main()
 {
-    auto client = rinst_client_get("");
-    rinst_client_free(client);
-
     auto& mbedtlsMgr = RInstaller::MbedtlsMgr::GetInstance();
     RInstaller::CertificateStore certStore(filesystem::current_path());
     cout << "Local cert thumbprint: " << certStore.GetCertificateTumbprint() << endl;
@@ -32,7 +29,7 @@ int main()
     cout << "Connecting to server" << endl;
     for (;;)
     {
-        if (auto ret = mbedtls_net_connect(socket.get(), "localhost", PortNumber.c_str(), MBEDTLS_NET_PROTO_TCP); ret == MBEDTLS_ERR_NET_CONNECT_FAILED)
+        if (auto ret = mbedtls_net_connect(socket.get(), "localhost", std::to_string(RInstaller::PortNumber).c_str(), MBEDTLS_NET_PROTO_TCP); ret == MBEDTLS_ERR_NET_CONNECT_FAILED)
         {
             continue;
         }
