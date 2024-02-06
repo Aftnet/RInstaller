@@ -17,7 +17,7 @@ namespace RInstaller
 	{
 		enum class Result
 		{
-			Ok, Busy, AlreadyConnected, HostNotResolvable, HostNotConnectable, TlsNegotiationError, OtherError
+			Ok, Busy, AlreadyConnected, NotConnected, HostNotResolvable, HostNotConnectable, TlsNegotiationError, OtherError
 		};
 
 	private:
