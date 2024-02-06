@@ -12,26 +12,27 @@
 using namespace RInstaller;
 using namespace std;
 
-Client::Client(const filesystem::path& appDataPath) :
+Client::Client(const filesystem::path& appDataPath, std::function<CertificateValidationAction(const std::string&)>& certValidationCB) :
+    CertValidationCB(certValidationCB),
     Busy(false),
     CancelRequested(false),
 	TlsMgr(MbedtlsMgr::GetInstance()),
 	CertStore(appDataPath),
-    Socket(nullptr, [](mbedtls_net_context* d) { mbedtls_net_close(d); mbedtls_net_free(d); delete d; })
+    Socket(nullptr, [](auto d) { mbedtls_net_close(d); mbedtls_net_free(d); delete d; }),
+    SslContext(nullptr, [](auto d) { mbedtls_ssl_free(d); delete d; }),
+    SslConfig(new mbedtls_ssl_config, [](auto d) { mbedtls_ssl_config_free(d); delete d; })
 {
-
+    mbedtls_ssl_config_init(SslConfig.get());
+    CertStore.SetupSslConfig(SslConfig.get(), false);
 }
 
 Client::Result Client::Connect(const string& hostname, const std::chrono::milliseconds& timeoutMs)
 {
-    if (Socket.get() != nullptr)
-    {
-        return Result::AlreadyConnected;
-    }
     if (Busy)
     {
         return Result::Busy;
     }
+    Busy = true;
 
     Socket.reset(new mbedtls_net_context);
     mbedtls_net_init(Socket.get());
@@ -43,7 +44,7 @@ Client::Result Client::Connect(const string& hostname, const std::chrono::millis
         {
         case MbedTlsOk:
         {
-            return Result::Ok;
+            break;
         }
         case MBEDTLS_ERR_NET_UNKNOWN_HOST:
         {
@@ -64,13 +65,48 @@ Client::Result Client::Connect(const string& hostname, const std::chrono::millis
         }
         default:
         {
-            break;
+            Socket.reset();
+            return Result::OtherError;
         }
         }
     }
 
-    Socket.reset();
-    return Result::OtherError;
+    SslContext.reset(new mbedtls_ssl_context);
+    mbedtls_ssl_init(SslContext.get());
+    mbedtls_ssl_set_bio(SslContext.get(), Socket.get(), mbedtls_net_send, mbedtls_net_recv, nullptr);
+    if (auto ret = mbedtls_ssl_set_hostname(SslContext.get(), RInstaller::CertificateStore::HostName.data()); ret != 0)
+    {
+        throw runtime_error("Failed setting hostname");
+    }
+    if (auto ret = mbedtls_ssl_setup(SslContext.get(), SslConfig.get()); ret != 0)
+    {
+        throw runtime_error("Failed setting up ssl context");
+    }
+
+    for (;;)
+    {
+        switch (mbedtls_ssl_handshake(SslContext.get()))
+        {
+            case MbedTlsOk:
+            {
+                break;
+            }
+            case MBEDTLS_ERR_SSL_WANT_READ:
+            {
+            }
+            case MBEDTLS_ERR_SSL_WANT_WRITE:
+            {
+            }
+            default:
+            {
+                Socket.reset();
+                return Result::OtherError;
+            }
+        }
+    }
+
+    Busy = false;
+    return Result::Ok;
 }
 
 Client::Result Client::Disconnect()
@@ -79,7 +115,9 @@ Client::Result Client::Disconnect()
     {
         return Result::Busy;
     }
+    Busy = true;
 
     Socket.reset();
+    Busy = false;
     return Result::Ok;
 }

@@ -230,30 +230,25 @@ void CertificateStore::ClearKnownCertificates()
     DeniedCertificates.Clear();
 }
 
-unique_ptr<mbedtls_ssl_config, void(*)(mbedtls_ssl_config*)>CertificateStore::GenerateConfig(bool configForServer) const
+void CertificateStore::SetupSslConfig(mbedtls_ssl_config* config, bool forServer) const
 {
-    unique_ptr<mbedtls_ssl_config, void(*)(mbedtls_ssl_config*)> sslConfig(new mbedtls_ssl_config, [](auto d) { mbedtls_ssl_config_free(d); delete d; });
-    mbedtls_ssl_config_init(sslConfig.get());
-
-    if (auto ret = mbedtls_ssl_config_defaults(sslConfig.get(), configForServer ? MBEDTLS_SSL_IS_SERVER : MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT); ret != 0)
+    if (auto ret = mbedtls_ssl_config_defaults(config, forServer ? MBEDTLS_SSL_IS_SERVER : MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT); ret != 0)
     {
         throw runtime_error(format("Failed setting ssl defaults. Err code: {}", ret));
     }
-    mbedtls_ssl_conf_min_version(sslConfig.get(), MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_3);
+    mbedtls_ssl_conf_min_version(config, MBEDTLS_SSL_MAJOR_VERSION_3, MBEDTLS_SSL_MINOR_VERSION_3);
 
-    mbedtls_ssl_conf_rng(sslConfig.get(), mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg());
-    mbedtls_ssl_conf_dbg(sslConfig.get(), &MbedtlsMgr::DebugPrint, nullptr);
-    mbedtls_ssl_conf_preference_order(sslConfig.get(), configForServer ? MBEDTLS_SSL_SRV_CIPHERSUITE_ORDER_SERVER : MBEDTLS_SSL_SRV_CIPHERSUITE_ORDER_CLIENT);
-    mbedtls_ssl_conf_authmode(sslConfig.get(), MBEDTLS_SSL_VERIFY_REQUIRED);
-    mbedtls_ssl_conf_ca_chain(sslConfig.get(), CaCertificate.get(), nullptr);
+    mbedtls_ssl_conf_rng(config, mbedtls_ctr_drbg_random, MbedtlsMgr::GetInstance().Ctr_Drdbg());
+    mbedtls_ssl_conf_dbg(config, &MbedtlsMgr::DebugPrint, nullptr);
+    mbedtls_ssl_conf_preference_order(config, forServer ? MBEDTLS_SSL_SRV_CIPHERSUITE_ORDER_SERVER : MBEDTLS_SSL_SRV_CIPHERSUITE_ORDER_CLIENT);
+    mbedtls_ssl_conf_authmode(config, MBEDTLS_SSL_VERIFY_REQUIRED);
+    mbedtls_ssl_conf_ca_chain(config, CaCertificate.get(), nullptr);
 
-    mbedtls_ssl_conf_verify(sslConfig.get(), &MbedTlsIOStreamInteractiveCertVerification, (void*)this);
-    if (auto ret = mbedtls_ssl_conf_own_cert(sslConfig.get(), GetCertificate(), GetPrivateKey()); ret != 0)
+    mbedtls_ssl_conf_verify(config, &MbedTlsIOStreamInteractiveCertVerification, (void*)this);
+    if (auto ret = mbedtls_ssl_conf_own_cert(config, GetCertificate(), GetPrivateKey()); ret != 0)
     {
         throw runtime_error(format("Failed setting ssl certificate. Err code: {}", ret));
     }
-
-    return sslConfig;
 }
 
 tuple<vector<unsigned char>, vector<unsigned char>> CertificateStore::GenerateKeyAndCertificateDer(mbedtls_pk_context* caKey, mbedtls_x509_crt* caCert)

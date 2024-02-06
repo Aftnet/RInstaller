@@ -65,7 +65,9 @@ int main()
 
     unique_ptr<mbedtls_ssl_context, void(*)(mbedtls_ssl_context*)> sslCtx(new mbedtls_ssl_context, [](auto d) { mbedtls_ssl_free(d); delete d; });
     mbedtls_ssl_init(sslCtx.get());
-    auto sslConfig = certStore.GenerateConfig(true);
+    unique_ptr<mbedtls_ssl_config, void(*)(mbedtls_ssl_config*)> sslConfig(new mbedtls_ssl_config, [](auto d) { mbedtls_ssl_config_free(d); delete d; });
+    mbedtls_ssl_config_init(sslConfig.get());
+    certStore.SetupSslConfig(sslConfig.get(), false);
     mbedtls_ssl_set_bio(sslCtx.get(), clientSocket.get(), mbedtls_net_send, mbedtls_net_recv, nullptr);
     if (auto ret = mbedtls_ssl_set_hostname(sslCtx.get(), RInstaller::CertificateStore::HostName.data()); ret != 0)
     {

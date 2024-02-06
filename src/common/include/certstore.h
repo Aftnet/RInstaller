@@ -31,7 +31,7 @@ namespace RInstaller
 
 		void ClearKnownCertificates();
 
-		std::unique_ptr<mbedtls_ssl_config, void(*)(mbedtls_ssl_config*)>GenerateConfig(bool) const;
+		void SetupSslConfig(mbedtls_ssl_config* config, bool forServer) const;
 
 		static int MbedTlsIOStreamInteractiveCertVerification(void*, mbedtls_x509_crt*, int, uint32_t*);
 	private:
